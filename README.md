@@ -260,36 +260,98 @@ narrow 36 drivers down to a shortlist, how to try one without upsetting the pane
 what evidence to send with the entry. Please read its safety rules before you point anything at a
 serial port.
 
-## Installing
+## Installation
 
-The plugin is not in the official repository. Install the package it needs, copy this repository to
-the firewall, and run the installer as root:
+The plugin is not in the OPNsense plugin repository yet, so there is no
+`pkg install os-frontpanel`. There is a package, and you build it — on the firewall,
+from this repository, in one command. Building needs no root and installs nothing.
 
 ```sh
-pkg install lcdproc
+fetch -o /tmp/frontpanel.tar.gz https://github.com/AbdelmonemAwad/os-frontpanel/archive/refs/heads/main.tar.gz
+tar -xzf /tmp/frontpanel.tar.gz -C /tmp
+cd /tmp/os-frontpanel-main
+sh tools/make-package.sh -o /tmp -c sysutils
+```
+
+The package declares `lcdproc` as a dependency, so `pkg add` fetches it for you if it
+is not already there. LCDproc is what actually speaks to the panel; this plugin
+generates its configuration and runs it.
+
+It tells you where it put the package, its digest, and which commit it came from:
+
+```
+/tmp/os-frontpanel-1.0.pkg
+SHA256 c1fb34e2c13d00019b0f3eefd87fae2ccde769b9111d95a3fede76e40b09b25c
+commit 3385f2f76
+built on OPNsense 26.7 amd64
+```
+
+The digest is of the file you just built. Two builds of the same commit do not
+produce the same digest unless the commit date is passed in, because otherwise every
+file in the archive carries its own mtime:
+
+```sh
+SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) sh tools/make-package.sh -o /tmp
+```
+
+Read it before you install it. Nothing about a package file makes it trustworthy, and both of
+these questions are answered out of the file itself, without touching the machine:
+
+```sh
+pkg info -F  /tmp/os-frontpanel-1.0.pkg    # version, licence, dependencies, description
+pkg info -lF /tmp/os-frontpanel-1.0.pkg    # every file it will write, and it writes no others
+```
+
+Then, as root:
+
+```sh
+pkg add /tmp/os-frontpanel-1.0.pkg
+```
+
+Then open **System → Front Panel**. It is under System rather than Interfaces because
+this is about the appliance itself and not about the network it serves.
+
+**Nothing is on the screen yet, and nothing will be until you turn it on.** Look at
+what the page proposes for your hardware, change what you disagree with, and press
+Apply. A wrong driver writing to the wrong serial port is not a mistake a plugin
+should make on its own initiative.
+
+A newer version goes on over an installed one with `pkg add -f`. Settings in `config.xml` and
+state under `/var/db` survive, because pkg replaces only the files the package owns.
+
+<details>
+<summary>Installing by hand instead, with no package</summary>
+
+`install/install.sh` does the same work and is what existed before there was a package:
+
+```sh
 fetch -o /tmp/frontpanel.tar.gz https://github.com/AbdelmonemAwad/os-frontpanel/archive/refs/heads/main.tar.gz
 tar -xzf /tmp/frontpanel.tar.gz -C /root
 sh /root/os-frontpanel-main/install/install.sh
 ```
 
-Then open **System → Front Panel**. The page is under System rather than Interfaces because this is
-about the appliance itself and not about the network it serves.
+The difference is only in the bookkeeping: pkg does not know the files are there, so
+`opnsense-version -c os-frontpanel` answers *not installed* on a machine where the plugin is
+running, and removal is `install/uninstall.sh` rather than `pkg delete`.
 
-Nothing is on the screen yet, and nothing will be until you turn the plugin on: look at what the page
-proposes for your hardware, change what you disagree with, and press Apply.
-
-The layout of this repository matches a plugin directory in
-[opnsense/plugins](https://github.com/opnsense/plugins), so `Makefile` and `pkg-descr` are only used
-when it is built as a package there.
+</details>
 
 ### Removing it
 
 ```sh
-sh /root/os-frontpanel-main/install/uninstall.sh
+pkg delete os-frontpanel
 ```
 
-The settings stay in `config.xml`, so a reinstall comes back with the same driver, the same port and
-the same speeds rather than asking you to find them all again.
+The service is stopped and the panel cleared before the files go. Settings stay in
+`config.xml`, so a reinstall comes back with the same driver, the same port and the
+same speeds rather than asking you to find them all again.
+
+### What a package outside the OPNsense repository does not get
+
+It is not upgraded by **System → Firmware → Updates**, because that only offers what the
+OPNsense repository carries, and this is not in it. A firmware update does not remove it —
+the files are pkg's, and OPNsense does not delete packages it did not install — but it will
+not be updated either. Build a new package from a newer tag and `pkg add -f` it.
 
 ## How it works
 
