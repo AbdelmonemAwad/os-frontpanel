@@ -1,0 +1,105 @@
+<form>
+    <field>
+        <type>header</type>
+        <label>The panel</label>
+    </field>
+    <field>
+        <id>frontpanel.general.enabled</id>
+        <label>Enabled</label>
+        <type>checkbox</type>
+        <help>Nothing runs until this is on. Turning it off stops the service; whatever was on the panel at that moment stays there, because a screen that is no longer being written to keeps its last frame.</help>
+    </field>
+    <field>
+        <id>frontpanel.general.driver</id>
+        <label>Driver</label>
+        <type>dropdown</type>
+        <help>Which LCDproc driver speaks to the panel. The list is the 36 drivers the lcdproc package installs on this firewall, offered by name: choosing one is not the same as knowing it fits, and the only way to find out is to enable the service and look at the screen. This appliance's panel answers to hd44780 over a serial connection of type ezio.</help>
+    </field>
+    <field>
+        <id>frontpanel.general.connection</id>
+        <label>Connection type</label>
+        <type>text</type>
+        <hint>ezio</hint>
+        <help>How the driver reaches the panel, in LCDproc's own words: this appliance is ezio, a serial adapter in front of an ordinary character display. Only some drivers have such a setting, hd44780 among them; leave this empty for a driver that has none, and the generated configuration will not mention it. LCDproc's sample configuration does not list the types, so this is a box rather than a menu.</help>
+    </field>
+    <field>
+        <id>frontpanel.general.device</id>
+        <label>Serial port</label>
+        <type>text</type>
+        <hint>/dev/cuau1</hint>
+        <help>The port the panel is wired to. The ports this machine has right now are listed under the box; on this appliance the panel is the second one, and the console is the first. Check that nothing else is using it: a port carrying a login prompt will answer this plugin with a login prompt.</help>
+    </field>
+    <field>
+        <id>frontpanel.general.size</id>
+        <label>Size</label>
+        <type>text</type>
+        <hint>16x2</hint>
+        <help>Columns by rows, as the panel is built. Everything that writes a line is cut to this width, so it is also the width the preview draws its grid at. This appliance is 16 columns by 2 rows.</help>
+    </field>
+    <field>
+        <id>frontpanel.general.keypad</id>
+        <label>Read the keys</label>
+        <type>checkbox</type>
+        <help>Poll the keys beside the screen. They are polled and never volunteered: the firewall asks the panel whether a button is down, and a panel that is never asked answers nothing, so no press arrives at all unless this is on. On this appliance all four keys report, measured one at a time. On a panel nobody has measured they may report nothing however long you press, which is a limit of the hardware and not a fault - the rotation runs on its timer either way, and nothing on the screen waits for a press. The diagnostics tab shows what the driver has actually reported.</help>
+    </field>
+    <field>
+        <type>header</type>
+        <label>Speed</label>
+    </field>
+    <field>
+        <id>frontpanel.general.screen_seconds</id>
+        <label>Seconds per screen</label>
+        <type>text</type>
+        <help>How long each screen is held before the next one takes its place. Three seconds is long enough to read two short lines and short enough that a rotation of six screens comes back round while somebody is still standing there.</help>
+    </field>
+    <field>
+        <id>frontpanel.general.scroll_speed</id>
+        <label>Scrolling speed</label>
+        <type>text</type>
+        <help>How fast text that is too long for the display slides across it: 1 is the slowest, 10 the fastest, and 0 stops the sliding altogether. The number is written into LCDproc's own TitleSpeed, and it reaches only the parts of a display that scroll. The two lines this plugin writes are not among them: they are cut at the width of the panel and stand still, and the preview shows exactly where. That is deliberate on a line this slow - text that slides is text being rewritten several times a second, and a busy line is what swallowed two thirds of the key presses on this appliance.</help>
+    </field>
+    <field>
+        <id>frontpanel.general.bus_delay</id>
+        <label>Delay multiplier</label>
+        <type>text</type>
+        <help>Raise this if characters go missing. The driver waits a fixed moment after each byte it sends; this multiplies that wait, for a panel that cannot keep up with the firewall and drops or scrambles what it could not take in. 1 is the driver's own default and 2 is what this appliance runs at. Every step up makes the whole display slower to write, so raise it one at a time and stop as soon as the text is clean. Drivers other than hd44780 mostly have no such setting, and the plugin leaves it out of the configuration it writes for them.</help>
+    </field>
+    <field>
+        <id>frontpanel.general.refresh_seconds</id>
+        <label>Redraw every (seconds)</label>
+        <type>text</type>
+        <help>How often the whole display is written again from scratch, so that a character which arrived corrupted cannot sit there until the screen changes. 0 turns the redraw off. This is the cheap insurance that lets the delay multiplier above stay low.</help>
+    </field>
+    <field>
+        <id>frontpanel.general.heartbeat</id>
+        <label>Heartbeat</label>
+        <type>checkbox</type>
+        <help>LCDproc's blinking mark in the corner, which says the server is alive. Off, because this panel has no glyph for it and draws a solid black block in its place - about half of what looked wrong with the first version was this one mark.</help>
+    </field>
+    <field>
+        <type>header</type>
+        <label>Screens</label>
+    </field>
+    <field>
+        <id>frontpanel.general.screens</id>
+        <label>Rotation</label>
+        <type>select_multiple</type>
+        <style>tokenize</style>
+        <sortable>true</sortable>
+        <help>Which screens are shown, and in which order: drag them into the order the panel should show them in. Port health reads the document os-linkhealth writes and is skipped where that plugin is not installed - it is the one screen that depends on anything outside this plugin, and nothing else changes when it is missing. Any screen with nothing to say is skipped in the same way, and the preview says which and why.</help>
+    </field>
+    <field>
+        <id>frontpanel.general.message</id>
+        <label>Message</label>
+        <type>text</type>
+        <hint>Ask Abdelmonem before unplugging</hint>
+        <help>The line the message screen shows, for a rack somebody else walks past. Anything longer than the display is wide is wrapped onto the second row, and what still does not fit is cut - the preview shows exactly where. A character panel has no glyph for most of the world's alphabets, so text that is not plain Latin is folded to the nearest thing it can draw, and the preview shows what the owner typed beside what the panel would make of it.</help>
+    </field>
+    <field>
+        <id>frontpanel.general.throughput_if</id>
+        <label>Throughput interface</label>
+        <type>text</type>
+        <hint>igb0</hint>
+        <help>The name the kernel gives the port the throughput screen measures, as shown under Interfaces. Leave it empty to measure the WAN, which is what somebody watching a firewall's front panel usually means.</help>
+    </field>
+</form>

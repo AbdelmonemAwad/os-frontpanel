@@ -1,0 +1,397 @@
+#!/bin/sh
+# Copyright (C) 2026 Abdelmonem Awad <eg2@live.com>. BSD 2-Clause License.
+
+# PROVIDE: frontpanel
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+
+#
+# The LCD built into the front of the appliance. Two processes, and the order they are
+# started and stopped in is the reason this is written out by hand instead of being handed
+# to rc.subr as a single command:
+#
+#   LCDd     LCDproc's server. The only thing on this machine that writes to the serial
+#            port, and the only thing that knows how to talk to this panel.
+#   client   ours: frontpanel.py, run as the screen client. It asks the firewall what it is
+#            doing and hands LCDd two lines at a time. It never touches the port itself.
+#
+# Nothing here is started by installing the plugin. The switch is off until somebody turns
+# it on, because a wrong driver writing to the wrong serial port is not a mistake a plugin
+# should make on its own initiative.
+#
+# The switch is what /etc/rc consults at boot, and that is all it is for. Whether the panel
+# should be running at any other moment is recorded in config.xml, where the settings page
+# writes it, and the page reaches this script through configd with the "one" prefix so that
+# the decision is not made twice from two files that can disagree. "enable" and "disable" -
+# rc.subr's own, nothing added here - are how the boot switch is written.
+#
+# Settings, in /usr/local/etc/rc.conf.d/frontpanel:
+#
+#   frontpanel_enable (bool)       NO by default. Nothing starts at boot until it is YES.
+#   frontpanel_stop_timeout (int)  seconds a process is given to finish its last write and
+#                                  clear the panel before it is killed outright. Default 10.
+#
+# Those two are the whole list, and the paths further down are deliberately not on it. Where
+# the configuration is written, where the pidfiles live and where LCDd's log is kept are known
+# to the Python side as well: the generator writes its file to one fixed path, the settings
+# page answers "has a key on this panel ever been pressed" by reading that log, and
+# frontpanel.py looks for the pidfiles under their own names. A knob here that only this file
+# obeyed would move the log somewhere the page never looks and call it a setting.
+#
+
+. /etc/rc.subr
+
+name="frontpanel"
+rcvar=frontpanel_enable
+
+load_rc_config $name
+
+: ${frontpanel_enable:="NO"}
+: ${frontpanel_stop_timeout:="10"}
+
+# A timeout that is not a number would turn every arithmetic expansion below into a syntax
+# error at the worst possible moment - in the middle of a stop - so it is read as a number
+# or not at all.
+case "${frontpanel_stop_timeout}" in
+''|*[!0-9]*|0)	frontpanel_stop_timeout=10 ;;
+esac
+
+# Not accepted as user input. Which binary is run is this plugin's business and not a
+# setting, and an rc.conf that could redirect it would be a way to run anything at all as
+# root at the next boot.
+frontpanel_lcdd="/usr/local/sbin/LCDd"
+frontpanel_client="/usr/local/opnsense/scripts/frontpanel/frontpanel.py"
+
+# Each of these names is written down in one other place, and what is here is a copy of that
+# one. config.py writes the generated configuration to this path and takes no argument that
+# could send it elsewhere; keys.py reads LCDd's log under this name, which is how the settings
+# page knows what the keypad has reported; and frontpanel.py's own status looks for these four
+# pidfiles. Two spellings of any of them would mean two answers to "is the panel running", and
+# the second answer would always be "no".
+frontpanel_conf="/usr/local/etc/frontpanel/LCDd.conf"
+frontpanel_rundir="/var/run/frontpanel"
+frontpanel_logdir="/var/log/frontpanel"
+
+frontpanel_lcdd_pid="${frontpanel_rundir}/LCDd.pid"
+frontpanel_lcdd_super="${frontpanel_rundir}/LCDd.supervisor.pid"
+frontpanel_lcdd_log="${frontpanel_logdir}/LCDd.log"
+
+frontpanel_client_pid="${frontpanel_rundir}/client.pid"
+frontpanel_client_super="${frontpanel_rundir}/client.supervisor.pid"
+frontpanel_client_log="${frontpanel_logdir}/client.log"
+
+# rc.subr is told about LCDd and not about the client, because LCDd is the process that holds
+# the serial port and lights the panel. What that buys is the one check rc.subr makes before a
+# custom command of its own: "start" refuses politely, and says which pid, when the panel is
+# already lit.
+#
+# It does not decide anything about stopping. rc.subr runs a script's own stop_cmd without
+# first asking whether it can see the service running - that question belongs to the default
+# stop it is not using here - and the switch is only consulted for a stop when no pid was
+# found. That still leaves one gap, which is why everything the settings page sends arrives
+# through configd with the "one" prefix: the page turns the panel off in config.xml and then
+# asks for a stop, and by then a plain stop with a stale pidfile would decline. A lit panel in
+# a rack with nobody left able to clear it is the one outcome worth this much care.
+pidfile="${frontpanel_lcdd_pid}"
+procname="${frontpanel_lcdd}"
+
+start_precmd="frontpanel_prestart"
+start_cmd="frontpanel_start"
+stop_cmd="frontpanel_stop"
+status_cmd="frontpanel_status"
+extra_commands="reload"
+reload_cmd="frontpanel_reload"
+
+#
+# The pid in $1, but only when a process with that pid is alive. Everything else - no file,
+# an empty file, a pid whose process died without tidying up after itself - reads as
+# nothing, so the rest of this script never has to ask twice whether a pidfile means
+# anything.
+#
+frontpanel_pid()
+{
+	local _pid _junk
+
+	[ -s "$1" ] || return 0
+	
+	# daemon(8) writes the pid with no trailing newline, and read(1) reports failure
+	# on an unterminated last line even though it has already assigned the value.
+	# Taking that exit status as "no pid" is how a lit panel reports itself stopped:
+	# every pid check in this script comes through here. Read it, then judge what
+	# was read - the validation below is what decides, and it is unchanged.
+	read _pid _junk < "$1" 2> /dev/null
+	case "${_pid}" in
+	''|*[!0-9]*)	return 0 ;;
+	esac
+	kill -0 "${_pid}" 2> /dev/null && echo "${_pid}"
+	return 0
+}
+
+#
+# Ask one of the two processes to stop, and wait for it.
+#
+# The signal goes to the daemon(8) supervisor rather than to the program itself. daemon
+# forwards SIGTERM to the program it is watching, waits for it, and removes both pidfiles
+# afterwards, so the program is asked exactly once and nothing is left behind. Signalling
+# both would deliver a second SIGTERM in the middle of the tidying-up the first one asked
+# for - which, for the client, is in the middle of clearing the panel.
+#
+# The wait is bounded because this is reached from the page through configd, which gives up
+# on a backend action of its own accord: a stop that hung here would be reported to whoever
+# pressed the button as a failure, while the panel was still being written to.
+#
+frontpanel_terminate()
+{
+	local _child _super _target _waited _left _pid
+
+	_child=$1
+	_super=$2
+	_target=${_super:-${_child}}
+	[ -n "${_target}" ] || return 0
+
+	kill -TERM "${_target}" 2> /dev/null
+
+	_waited=0
+	while :; do
+		_left=
+		for _pid in ${_child} ${_super}; do
+			kill -0 "${_pid}" 2> /dev/null &&
+			    _left="${_left}${_left:+ }${_pid}"
+		done
+		[ -n "${_left}" ] || return 0
+		[ ${_waited} -ge $((frontpanel_stop_timeout * 5)) ] && break
+		sleep 0.2
+		_waited=$((_waited + 1))
+	done
+
+	warn "${name}: pid ${_left} would not stop within ${frontpanel_stop_timeout} seconds"
+	kill -KILL ${_left} 2> /dev/null
+	return 0
+}
+
+#
+# Everything that has to be true before either process is started. A failure here returns
+# non-zero, which rc.subr takes as "do not start", so nothing has been launched yet at the
+# moment the reason is printed.
+#
+frontpanel_prestart()
+{
+	local _report
+
+	if [ ! -x "${frontpanel_lcdd}" ]; then
+		warn "${name}: LCDproc is not installed (${frontpanel_lcdd} is missing)"
+		return 1
+	fi
+	if [ ! -x "${frontpanel_client}" ]; then
+		warn "${name}: the screen client is missing (${frontpanel_client})"
+		return 1
+	fi
+
+	# The run directory holds nothing but pidfiles and is 0755 like the rest of /var/run; the
+	# other two are 0750 because LCDd's log carries the driver's own report of what it found on
+	# the serial port and the configuration names the port it found it on. These are the same
+	# modes frontpanel.py sets when it makes the directories itself, so whichever of the two
+	# arrives first, the second finds nothing to change.
+	install -d -o root -g wheel -m 0755 "${frontpanel_rundir}" || return 1
+	install -d -o root -g wheel -m 0750 "${frontpanel_logdir}" || return 1
+	install -d -o root -g wheel -m 0750 "${frontpanel_conf%/*}" || return 1
+
+	# A client with no server to talk to. This happens when LCDd has died on its own - a USB
+	# adapter pulled out from under it, say - and the client is left going round its
+	# reconnection loop. rc.subr watches LCDd and would see nothing wrong with starting, and
+	# the second client would then be refused by daemon(8) because the first still holds the
+	# pidfile, and a start that got as far as lighting the panel would be undone again. Take
+	# the orphan away first: it is talking to nobody.
+	if [ -z "$(frontpanel_pid "${frontpanel_lcdd_pid}")" ] &&
+	    [ -n "$(frontpanel_pid "${frontpanel_client_pid}")" ]; then
+		frontpanel_terminate "$(frontpanel_pid "${frontpanel_client_pid}")" \
+		    "$(frontpanel_pid "${frontpanel_client_super}")"
+		rm -f "${frontpanel_client_pid}" "${frontpanel_client_super}"
+	fi
+
+	# The configuration LCDd reads is generated from config.xml here, on every start, and
+	# nowhere else. Not by the installer, which has no business deciding what gets written to
+	# a serial port, and not by the settings page either: a restart is what applies a change,
+	# so generating at exactly that moment is the only arrangement in which the file on disk
+	# and the panel in the rack cannot disagree. It also means a config.xml restored from a
+	# backup is honoured at the next boot instead of being quietly overruled by a stale file.
+	if ! _report=$("${frontpanel_client}" build-config 2>&1); then
+		warn "${name}: the LCDd configuration could not be generated: ${_report}"
+		return 1
+	fi
+	if [ ! -s "${frontpanel_conf}" ]; then
+		warn "${name}: ${frontpanel_conf} was not written"
+		return 1
+	fi
+
+	# Nothing further is checked about that file here, and deliberately so. Whether the port
+	# exists, whether it is a serial port at all and whether /etc/ttys already gives it a login
+	# prompt are all asked by the generator, which refuses rather than writes - and a second
+	# copy of those rules in this script would only be a second place they could drift out of
+	# step. A refusal arrives above, in the generator's own words.
+	return 0
+}
+
+frontpanel_await()
+{
+	# Wait for daemon(8) to record a pid and for that pid to be a live process. Five
+	# seconds is far longer than a healthy start needs - LCDd was measured well inside
+	# one - and far shorter than anybody would sit watching a panel that is not coming up.
+	local _file="$1" _waited=0 _pid
+	while [ ${_waited} -lt 50 ]; do
+		_pid=$(frontpanel_pid "${_file}")
+		if [ -n "${_pid}" ] && kill -0 "${_pid}" 2> /dev/null; then
+			echo "${_pid}"
+			return 0
+		fi
+		sleep 0.1
+		_waited=$((_waited + 1))
+	done
+	return 1
+}
+
+frontpanel_start()
+{
+	echo "Starting ${name}."
+
+	# The old log is moved aside before anything is started. The settings page answers "has a
+	# key on this panel ever been pressed" out of this file, and that answer is only about the
+	# run somebody is watching if the file begins when the run does. One previous copy is kept
+	# - the same thing frontpanel.py does when it starts these two processes from the command
+	# line - and newsyslog takes care of the file while it is growing.
+	if [ -f "${frontpanel_lcdd_log}" ]; then
+		mv -f "${frontpanel_lcdd_log}" "${frontpanel_lcdd_log}.1"
+	fi
+
+	# LCDd first and on its own. It opens the serial port and initialises the panel, and a
+	# client that arrives before it is listening has nothing to talk to.
+	#
+	# The two -f are different flags and both are meant. daemon's own is --close-fds: standard
+	# input comes from /dev/null, while the output still goes where -o sends it. The one after
+	# the binary is LCDd's and keeps it in the foreground, so that the pid daemon(8) records is
+	# LCDd's own and not that of a parent which forked and left; it overrides the configuration
+	# file's Foreground setting deliberately, because a generated config must not be able to
+	# break the pidfile. -p names LCDd, which is what stop signals and what status reports; -P
+	# names daemon itself, which is what holds the log file open and what newsyslog signals -
+	# and -H is what makes that signal mean "close this file and open it again" rather than
+	# reaching the program or ending the supervisor.
+	if ! /usr/sbin/daemon -f -t "${name}: LCDd" \
+	    -p "${frontpanel_lcdd_pid}" -P "${frontpanel_lcdd_super}" \
+	    -o "${frontpanel_lcdd_log}" -H \
+	    "${frontpanel_lcdd}" -f -c "${frontpanel_conf}"; then
+		warn "${name}: LCDd could not be started"
+		return 1
+	fi
+
+	# LCDd fails by exiting, not by complaining. A serial port that is not there, a driver
+	# that will not load, a panel size the driver refuses - all of them end the process inside
+	# the first second. A second's wait buys the difference between telling the person who
+	# pressed Start what went wrong, in the driver's own words, and leaving it in a log nobody
+	# opens.
+	if ! frontpanel_await "${frontpanel_lcdd_pid}" > /dev/null; then
+		warn "${name}: LCDd did not stay up. Its last words were:"
+		tail -n 10 "${frontpanel_lcdd_log}" 2> /dev/null
+		return 1
+	fi
+
+	if ! /usr/sbin/daemon -f -t "${name}: client" \
+	    -p "${frontpanel_client_pid}" -P "${frontpanel_client_super}" \
+	    -o "${frontpanel_client_log}" -H \
+	    "${frontpanel_client}" client; then
+		warn "${name}: the screen client could not be started"
+		frontpanel_terminate "$(frontpanel_pid "${frontpanel_lcdd_pid}")" \
+		    "$(frontpanel_pid "${frontpanel_lcdd_super}")"
+		return 1
+	fi
+
+	if ! frontpanel_await "${frontpanel_client_pid}" > /dev/null; then
+		warn "${name}: the screen client did not stay up. Its last words were:"
+		tail -n 10 "${frontpanel_client_log}" 2> /dev/null
+		# LCDd would be left holding a panel that nobody is writing to, sitting in the rack
+		# showing LCDproc's own idea of a screen until somebody noticed. Take it back down
+		# rather than leave half a service running.
+		frontpanel_terminate "$(frontpanel_pid "${frontpanel_lcdd_pid}")" \
+		    "$(frontpanel_pid "${frontpanel_lcdd_super}")"
+		return 1
+	fi
+
+	return 0
+}
+
+frontpanel_stop()
+{
+	local _lcdd _client
+
+	_lcdd=$(frontpanel_pid "${frontpanel_lcdd_pid}")
+	_client=$(frontpanel_pid "${frontpanel_client_pid}")
+
+	if [ -z "${_lcdd}" ] && [ -z "${_client}" ]; then
+		echo "${name} is not running."
+		return 0
+	fi
+
+	echo "Stopping ${name}."
+
+	# This order is the whole reason the two processes are not simply handed to rc.subr.
+	#
+	# The client is stopped first and waited for: it catches the signal, finishes the line it
+	# is in the middle of and clears the panel before it exits. Taking LCDd away underneath it
+	# would leave the panel latched on half a frame - the appliance would sit in the rack
+	# showing four characters of a sentence until somebody started the service again.
+	frontpanel_terminate "${_client}" "$(frontpanel_pid "${frontpanel_client_super}")"
+	frontpanel_terminate "${_lcdd}" "$(frontpanel_pid "${frontpanel_lcdd_super}")"
+
+	# daemon(8) removes its own pidfiles on the way out; these are the ones it did not get
+	# round to because it had to be killed.
+	rm -f "${frontpanel_client_pid}" "${frontpanel_client_super}" \
+	    "${frontpanel_lcdd_pid}" "${frontpanel_lcdd_super}"
+
+	return 0
+}
+
+frontpanel_status()
+{
+	local _lcdd _client
+
+	_lcdd=$(frontpanel_pid "${frontpanel_lcdd_pid}")
+	_client=$(frontpanel_pid "${frontpanel_client_pid}")
+
+	# The wording is not free. OPNsense reads this line and looks in it for "not running"
+	# first and for "is running" second, so the two phrases must never appear together. Half
+	# a service is not a running service, which is why one process missing is reported as not
+	# running - with the half that is still up named afterwards, because somebody reading the
+	# page deserves to be told which half.
+	if [ -n "${_lcdd}" ] && [ -n "${_client}" ]; then
+		echo "${name} is running as pid ${_lcdd} (LCDd) and pid ${_client} (the screen client)."
+		return 0
+	fi
+	if [ -n "${_lcdd}" ]; then
+		echo "${name} is not running: LCDd holds the panel as pid ${_lcdd}," \
+		    "but nothing is writing to it."
+		return 1
+	fi
+	if [ -n "${_client}" ]; then
+		echo "${name} is not running: the screen client is up as pid ${_client}," \
+		    "but LCDd is gone."
+		return 1
+	fi
+
+	echo "${name} is not running."
+	return 1
+}
+
+#
+# There is no reload, and there cannot be one. LCDd reads its configuration once, when it
+# starts, and the settings that matter most here - which port, which baud rate, how many
+# columns, whether the keys are polled at all - are applied by the driver at the moment it is
+# loaded and at no point after. This exists so that a caller which asks for a reload is given
+# a working panel instead of an error.
+#
+frontpanel_reload()
+{
+	frontpanel_stop || return 1
+	frontpanel_prestart || return 1
+	frontpanel_start
+}
+
+run_rc_command "$1"

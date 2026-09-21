@@ -1,0 +1,219 @@
+<model>
+    <mount>//OPNsense/FrontPanel</mount>
+    <version>1.0.0</version>
+    <description>Front panel</description>
+    <items>
+        <!--
+            Everything lives in this one container, and the names are not free.
+            Nothing here is read through the model at run time: the screen client and the
+            configuration generator are Python, started by an rc.d service, and config.py reads
+            ./OPNsense/FrontPanel/general out of /conf/config.xml and looks up every one of these
+            by name. Rename one, or move it into a container of its own, and the settings page
+            saves a value that nothing ever reads.
+
+            That is also why the five speeds are not a group here. They are a group where a group
+            can be seen - their own section, with its own heading, on the settings page - which is
+            what the owner asked for after watching the first version run.
+        -->
+        <general>
+            <enabled type="BooleanField">
+                <Required>Y</Required>
+                <!--
+                    Off. A plugin that starts writing to a serial port on the strength of having
+                    been installed is a plugin that can take the console away from somebody who
+                    was using it, and no amount of probing beforehand makes that decision safe to
+                    take on somebody else's behalf.
+                -->
+                <Default>0</Default>
+            </enabled>
+            <!--
+                The 36 drivers the lcdproc 0.5.9 package actually installs, read from
+                /usr/local/lib/lcdproc on the reference appliance on 2026-09-21 and written out
+                in the order the directory lists them. They are offered by name and nothing more:
+                this plugin has no way to know which of them fits a panel it has never seen, and
+                a friendly description invented here would read as a promise. The one appliance
+                whose panel has been proven is noted, and so is the one driver the design says
+                can never read a key.
+            -->
+            <driver type="OptionField">
+                <Required>Y</Required>
+                <Default>hd44780</Default>
+                <OptionValues>
+                    <CFontz>CFontz</CFontz>
+                    <CFontzPacket>CFontzPacket</CFontzPacket>
+                    <CwLnx>CwLnx</CwLnx>
+                    <EyeboxOne>EyeboxOne</EyeboxOne>
+                    <IOWarrior>IOWarrior</IOWarrior>
+                    <MD8800>MD8800</MD8800>
+                    <MtxOrb>MtxOrb</MtxOrb>
+                    <NoritakeVFD>NoritakeVFD</NoritakeVFD>
+                    <SureElec>SureElec</SureElec>
+                    <bayrad>bayrad</bayrad>
+                    <curses>curses</curses>
+                    <ea65>ea65</ea65>
+                    <glcd>glcd</glcd>
+                    <glk>glk</glk>
+                    <hd44780>hd44780 (this appliance: connection ezio on /dev/cuau1)</hd44780>
+                    <icp_a106>icp_a106</icp_a106>
+                    <lb216>lb216</lb216>
+                    <lcdm001>lcdm001</lcdm001>
+                    <lcterm>lcterm</lcterm>
+                    <ms6931>ms6931</ms6931>
+                    <mtc_s16209x>mtc_s16209x (lights the screen, cannot read keys)</mtc_s16209x>
+                    <picolcd>picolcd</picolcd>
+                    <pyramid>pyramid</pyramid>
+                    <rawserial>rawserial</rawserial>
+                    <sdeclcd>sdeclcd</sdeclcd>
+                    <sed1330>sed1330</sed1330>
+                    <sed1520>sed1520</sed1520>
+                    <serialPOS>serialPOS</serialPOS>
+                    <serialVFD>serialVFD</serialVFD>
+                    <shuttleVFD>shuttleVFD</shuttleVFD>
+                    <sli>sli</sli>
+                    <stv5730>stv5730</stv5730>
+                    <t6963>t6963</t6963>
+                    <text>text</text>
+                    <tyan>tyan</tyan>
+                    <vlsys_m428>vlsys_m428</vlsys_m428>
+                </OptionValues>
+            </driver>
+            <!--
+                LCDproc's ConnectionType, which the table in the design does not name and the
+                reference configuration cannot do without: this panel is an hd44780 reached over
+                a serial adapter called ezio, and a driver setting that could not be reached from
+                this page would have to be edited by hand in a file the plugin generates and
+                overwrites. Left as a box rather than a list because LCDproc's own sample
+                configuration says only "see documentation for available types" - a list invented
+                here would be a list of guesses, and drivers other than hd44780 have none at all.
+            -->
+            <connection type="TextField">
+                <Mask>/^[0-9A-Za-z_-]{1,32}$/</Mask>
+                <ValidationMessage>Enter a connection type as LCDproc spells it, such as ezio.</ValidationMessage>
+            </connection>
+            <!--
+                Not a list of the ports this machine happens to have: a machine gains and loses
+                serial ports with a USB adapter, and a list baked into the model would refuse a
+                port that appeared after the plugin was installed. The page offers what the
+                machine reports right now, beside the box, and anything shaped like a device node
+                is accepted here.
+            -->
+            <device type="TextField">
+                <Required>Y</Required>
+                <Default>/dev/cuau1</Default>
+                <Mask>/^\/dev\/[0-9A-Za-z._-]{1,32}$/</Mask>
+                <ValidationMessage>Enter the device node of a serial port, such as /dev/cuau1.</ValidationMessage>
+            </device>
+            <!--
+                Columns by rows. Everything that draws a line has to know this, and so does the
+                preview on the settings page, which is the only place a line that is too long can
+                be seen before the panel silently drops the end of it.
+            -->
+            <size type="TextField">
+                <Required>Y</Required>
+                <Default>16x2</Default>
+                <Mask>/^([1-9][0-9]{0,2})x([1-9][0-9]?)$/</Mask>
+                <ValidationMessage>Enter the size as columns by rows, such as 16x2.</ValidationMessage>
+            </size>
+            <keypad type="BooleanField">
+                <Required>Y</Required>
+                <Default>1</Default>
+            </keypad>
+
+            <!--
+                The speeds. The owner asked for these after watching the first version run, and
+                each one is a line that ends up in LCDd.conf. Every bound below is the one
+                config.py clamps to, so that the page refuses what the generator would otherwise
+                quietly round off - a setting that is accepted and then ignored is worse than one
+                that is refused with a reason.
+            -->
+            <!-- LCDd's WaitTime -->
+            <screen_seconds type="IntegerField">
+                <Required>Y</Required>
+                <Default>3</Default>
+                <MinimumValue>1</MinimumValue>
+                <MaximumValue>60</MaximumValue>
+                <ValidationMessage>A screen can be held for between 1 and 60 seconds.</ValidationMessage>
+            </screen_seconds>
+            <!--
+                LCDd's TitleSpeed, whose own documented range is 0 to 10 and nothing else, so the
+                bounds here are the server's rather than a taste of ours.
+            -->
+            <scroll_speed type="IntegerField">
+                <Required>Y</Required>
+                <Default>10</Default>
+                <MinimumValue>0</MinimumValue>
+                <MaximumValue>10</MaximumValue>
+                <ValidationMessage>The scrolling speed runs from 0, which is no scrolling at all, to 10.</ValidationMessage>
+            </scroll_speed>
+            <!--
+                The hd44780 driver's DelayMult. LCDproc documents no ceiling for it; 20 is ours,
+                and it is far past the 2 or 4 the driver's own notes suggest, so nobody is going
+                to meet it while actually trying to cure a display that drops characters.
+            -->
+            <bus_delay type="IntegerField">
+                <Required>Y</Required>
+                <Default>2</Default>
+                <MinimumValue>1</MinimumValue>
+                <MaximumValue>20</MaximumValue>
+                <ValidationMessage>The delay multiplier must be between 1 and 20.</ValidationMessage>
+            </bus_delay>
+            <!-- the hd44780 driver's RefreshDisplay, where 0 is the driver's own "never" -->
+            <refresh_seconds type="IntegerField">
+                <Required>Y</Required>
+                <Default>4</Default>
+                <MinimumValue>0</MinimumValue>
+                <MaximumValue>60</MaximumValue>
+                <ValidationMessage>The redraw period must be between 0 and 60 seconds.</ValidationMessage>
+            </refresh_seconds>
+            <heartbeat type="BooleanField">
+                <Required>Y</Required>
+                <!-- off, because this panel has no glyph for it and draws a solid black block -->
+                <Default>0</Default>
+            </heartbeat>
+
+            <!--
+                The rotation: which screens are shown, and in which order.
+
+                A plain list rather than a set, because the order is half the setting, and a
+                multiple-choice field hands its values back in the order the model declares them
+                rather than the order they were chosen. This one keeps what it was given, so the
+                tokens on the page can be dragged into the order the panel will show them in.
+
+                The names are the keys screens.py dispatches on, and the mask holds the field to
+                them one entry at a time: a name that is not one of these draws nothing, and a
+                rotation with a silent gap in it is a thing nobody would think to look for.
+            -->
+            <screens type="CSVListField">
+                <Required>Y</Required>
+                <Default>identity,wan,throughput,system,temperature,ports,message</Default>
+                <MaskPerItem>Y</MaskPerItem>
+                <Mask>/^(identity|wan|throughput|system|temperature|ports|message)$/</Mask>
+                <ValidationMessage>Choose screens from the list; that is not one of them.</ValidationMessage>
+            </screens>
+            <!--
+                The line the message screen shows. Quotes, backslashes and angle brackets are
+                kept out because this string is carried through a generated configuration file
+                and an HTML preview before it ever reaches the panel, and a character that needs
+                quoting in three places is a character that will eventually be quoted wrongly in
+                one of them. Anything else is allowed in, including text in any script: the
+                screen generator folds what it cannot draw and says in the preview that it did.
+            -->
+            <message type="TextField">
+                <AllowNewlines>N</AllowNewlines>
+                <Mask>/^[^"\\&lt;>]{1,64}$/u</Mask>
+                <ValidationMessage>Use up to 64 characters, without quotes, backslashes or angle brackets.</ValidationMessage>
+            </message>
+            <!--
+                The interface the throughput screen measures, named the way the kernel names it
+                rather than the way the firewall labels it: the screen generator matches this
+                against the device behind each configured interface. Empty is not a mistake - the
+                generator then measures the WAN, which is what somebody watching a firewall's
+                front panel usually means.
+            -->
+            <throughput_if type="TextField">
+                <Mask>/^[a-z][a-z0-9_.]*[0-9]$/</Mask>
+                <ValidationMessage>Enter the name the kernel gives the port, such as igb0.</ValidationMessage>
+            </throughput_if>
+        </general>
+    </items>
+</model>

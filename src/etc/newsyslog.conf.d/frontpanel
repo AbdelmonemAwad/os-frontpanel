@@ -1,0 +1,23 @@
+# Copyright (C) 2026 Abdelmonem Awad <eg2@live.com>. BSD 2-Clause License.
+#
+# Rotation for the two logs the front panel service writes. See newsyslog.conf(5).
+#
+# These are ordinary files rather than syslog because the settings page reads the LCDd log
+# back: what the driver last reported is the only honest answer to "has a key on this panel
+# ever been pressed", and a file is something a script can tail. LCDd is nearly silent at its
+# usual reporting level, but the key test raises that level on purpose, and a panel whose keys
+# are polled several times a second can then write a great deal in an afternoon - hence a size
+# limit rather than a schedule.
+#
+# The signal goes to the daemon(8) supervisor named in the pidfile, not to LCDd or to the
+# client: daemon is what holds the log open, and it was started with -H so that SIGHUP means
+# "close this file and open it again" and nothing else. Neither program is disturbed.
+#
+# The two names are the ones the rest of the plugin uses: LCDd.log is where keys.py looks for
+# what the driver reported, client.log is the screen client's own, and the pidfiles are the
+# supervisors daemon(8) writes. 600 is daemon(8)'s own mode for a file it creates, so the entry
+# and the file agree on the first rotation as well as on the fiftieth.
+#
+# logfilename                        [owner:group]  mode  count  size  when  flags  [/pid_file]                              [sig_num]
+/var/log/frontpanel/LCDd.log         root:wheel     600   4      200   *     CJ     /var/run/frontpanel/LCDd.supervisor.pid   1
+/var/log/frontpanel/client.log       root:wheel     600   4      200   *     CJ     /var/run/frontpanel/client.supervisor.pid 1

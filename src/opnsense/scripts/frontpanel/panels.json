@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "comment": [
+    "Known appliances and the LCDproc driver that lights their built-in panel.",
+    "",
+    "Same shape and the same discipline as os-linkhealth's chassis.json: match on SMBIOS, propose",
+    "a driver and its options, and say plainly how far the proposal has actually been proven. An",
+    "entry is a claim about a machine we cannot see, so every one of them carries a 'confirmed'",
+    "line written by whoever watched the screen light up - or left empty, which means nobody has.",
+    "",
+    "Nothing here is applied on its own. The settings page offers the match as a starting point and",
+    "the owner presses Apply. A wrong driver writing to the wrong serial port is not a mistake a",
+    "plugin should make on its own initiative, and a serial port on an unknown appliance may be",
+    "somebody's console.",
+    "",
+    "Matching uses kenv smbios values, exactly as os-linkhealth does. maker/product/version are",
+    "regular expressions. The first entry whose every stated field matches wins; 'generic' is the",
+    "fallback and proposes nothing at all.",
+    "",
+    "The 'drivers' table below is only a fallback. config.py prefers /usr/local/etc/LCDd.conf.sample,",
+    "which the lcdproc package installs and which lists, section by section, every option each",
+    "driver really understands. Reading the installed package beats trusting a table copied into",
+    "this file, which would rot the first time LCDproc gained an option."
+  ],
+  "panels": {
+    "sophos-xg-3xx": {
+      "display": "Sophos XG / XGS front panel",
+      "match": {
+        "maker": "^Sophos$",
+        "product": "^XG$"
+      },
+      "driver": "hd44780",
+      "options": {
+        "ConnectionType": "ezio",
+        "Device": "/dev/cuau1",
+        "Size": "16x2",
+        "Keypad": "yes"
+      },
+      "keymap": {
+        "KeyMatrix_4_1": "Down",
+        "KeyMatrix_4_2": "Escape",
+        "KeyMatrix_4_3": "Up",
+        "KeyMatrix_4_4": "Enter"
+      },
+      "speed": {
+        "bus_delay": 2,
+        "refresh_seconds": 4,
+        "heartbeat": false
+      },
+      "confirmed": "XG 330 rev 2 (smbios version 330r2), 2026-09-21: the display is verified - LCDd initialised the panel with no errors and the owner photographed live CPU, memory and uptime screens on it. The keypad is verified too: all four keys reported, measured one button at a time at ReportLevel 5 with the screen held still, three presses and three events each. The map above is that measurement and not LCDproc's default order, which puts Enter on 4,1 - where this panel has its down arrow.",
+      "notes": [
+        "ConnectionType=ezio fixes the line at 2400 baud by itself - the driver reported 'serial: using speed: 2400' with no Speed option set, so this entry deliberately does not write one.",
+        "Heartbeat must stay off. This panel has no programmable character for LCDproc's heartbeat glyph and draws it as a solid black block in the corner.",
+        "DelayMult=2 is what the owner settled on after trying 4: faster, and with RefreshDisplay redrawing the whole screen every few seconds it has not dropped a character.",
+        "The panel is printed with a down arrow, ESC, an up arrow and ENTER, in that order, and that is the order of the matrix positions above.",
+        "At 2400 baud the display and the keypad share the line: with screens changing every 3 seconds and a full redraw every 4, two thirds of the presses were lost. A quiet screen is what makes this keypad reliable: hold the screen still while measuring the keys, and keep the redraw interval wide on a panel whose keys are used."
+      ]
+    },
+    "sophos-xg-family": {
+      "display": "Sophos XG / XGS (panel not confirmed on this model)",
+      "comment": [
+        "A Sophos box whose exact model we have not watched. The hardware is close enough that the",
+        "same proposal is worth offering, but it is offered as a guess and labelled as one: the",
+        "settings page shows the empty 'confirmed' line and says nobody has seen this work yet."
+      ],
+      "match": {
+        "maker": "^Sophos$"
+      },
+      "driver": "hd44780",
+      "options": {
+        "ConnectionType": "ezio",
+        "Device": "/dev/cuau1",
+        "Size": "16x2",
+        "Keypad": "yes"
+      },
+      "keymap": {
+        "KeyMatrix_4_1": "Down",
+        "KeyMatrix_4_2": "Escape",
+        "KeyMatrix_4_3": "Up",
+        "KeyMatrix_4_4": "Enter"
+      },
+      "speed": {
+        "bus_delay": 2,
+        "refresh_seconds": 4,
+        "heartbeat": false
+      },
+      "confirmed": "",
+      "hint": "Nobody has confirmed this model yet. Press Test after applying: if the panel stays dark, try the driver list - mtc_s16209x lights a screen of this shape and cannot read a button, which is the honest fallback. The key map is copied from the XG 330 rev 2 and is a guess here: measure it with the key test before you trust which button is which."
+    },
+    "generic": {
+      "display": "unrecognised appliance",
+      "match": {},
+      "driver": "",
+      "options": {},
+      "confirmed": "",
+      "hint": "No proposal for this machine. Choose a driver and a serial port by hand - the page lists the drivers this installation of LCDproc actually carries and the ports this machine actually has - then press Test. Sending a report of what worked is how this table grows."
+    }
+  },
+  "drivers": {
+    "comment": [
+      "Fallback only, used when /usr/local/etc/LCDd.conf.sample is missing. Every option name here",
+      "was read out of that sample on the reference machine (lcdproc 0.5.9_1), not remembered.",
+      "A driver absent from this table is not refused: config.py writes what the panel entry asks",
+      "for and says in its answer that it could not check the option names."
+    ],
+    "hd44780": [
+      "ConnectionType", "Port", "Device", "Speed", "Keypad", "Contrast", "Brightness",
+      "OffBrightness", "Backlight", "OutputPort", "Lastline", "Size", "vspan", "ExtendedMode",
+      "LineAddress", "CharMap", "DelayMult", "KeepAliveDisplay", "RefreshDisplay", "DelayBus",
+      "KeyMatrix_4_1", "KeyMatrix_4_2", "KeyMatrix_4_3", "KeyMatrix_4_4"
+    ],
+    "mtc_s16209x": ["Device", "Brightness", "Reboot"],
+    "CFontz": ["Device", "Size", "Contrast", "Brightness", "OffBrightness", "Speed", "NewFirmware", "Reboot"],
+    "CFontzPacket": ["Model", "Device", "Contrast", "Brightness", "OffBrightness", "Reboot", "USB", "OldFirmware", "Size", "Speed"],
+    "CwLnx": ["Model", "Device", "Size", "Speed", "Reboot", "Keypad", "keypad_test_mode"],
+    "serialVFD": ["Type", "use_parallel", "Port", "PortWait", "Device", "Size", "Brightness", "OffBrightness", "Speed", "ISO_8859_1"],
+    "picolcd": ["KeyTimeout", "KeyRepeatDelay", "KeyRepeatInterval", "Backlight", "Brightness", "OffBrightness", "Contrast", "LinkLights", "Keylights"],
+    "glcd": ["ConnectionType", "Size", "CellSize", "useFT2", "normal_font", "fontHasIcons", "Contrast", "Brightness", "OffBrightness", "KeyRepeatDelay", "KeyRepeatInterval", "KeyMap_A", "KeyMap_B", "KeyMap_C", "KeyMap_D", "Port", "bidirectional", "delayBus"],
+    "text": ["Size"],
+    "curses": ["Foreground", "Background", "Backlight", "Size", "TopLeftX", "TopLeftY", "UseACS", "DrawBorder"]
+  },
+  "speed_options": {
+    "comment": [
+      "Where each adjustable speed from the settings page lands in LCDd.conf. The three server",
+      "options exist whatever the driver is. The two driver options do not: DelayMult belongs to",
+      "hd44780 and sed1520 only, RefreshDisplay to hd44780 only, and writing either into a section",
+      "that has never heard of it makes LCDd complain on every start. config.py checks the driver's",
+      "real option list before writing them, and reports the knobs it had to leave out."
+    ],
+    "server": {
+      "screen_seconds": "WaitTime",
+      "scroll_speed": "TitleSpeed",
+      "heartbeat": "Heartbeat"
+    },
+    "driver": {
+      "bus_delay": "DelayMult",
+      "refresh_seconds": "RefreshDisplay"
+    }
+  }
+}

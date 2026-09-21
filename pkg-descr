@@ -1,0 +1,38 @@
+Front Panel puts the firewall's own information on the LCD built into the
+front of the appliance, and gives the buttons beside it something to do.
+
+It writes no display code of its own. LCDproc already speaks to these
+panels and OPNsense already carries it, so this plugin is the part above:
+it generates the server's configuration from a settings page, runs it as
+a service, and feeds it screens. Which driver, which serial port, how
+many columns and rows and whether the keys are polled are all chosen on
+that page, from the thirty-six drivers the LCDproc package installs, so
+an appliance with a different panel is a matter of choosing rather than
+of waiting for code.
+
+A short table of known appliances is shipped. It matches on SMBIOS and
+proposes a driver and its settings, and says plainly that a proposal is
+all it is until somebody confirms the screen lit up. Nothing is applied
+on installation and nothing starts by itself: a wrong driver writing to
+the wrong serial port is not a mistake a plugin should make on its own
+initiative.
+
+Every speed is adjustable: how long each screen is shown, how fast a long
+line scrolls, how often the display is redrawn from scratch, and the bus
+delay to raise when characters go missing. The shipped screens are the
+hostname and LAN address, the WAN address and its gateway, throughput on
+a chosen interface, CPU, memory and uptime, the CPU temperature where a
+sensor exists, a fixed message of your own, and - only where Link Health
+happens to be installed - the worst port and its verdict.
+
+The keys are polled rather than volunteered, and not every panel answers.
+The page shows what the driver last reported, so a user on unknown
+hardware can find out in ten seconds instead of guessing, and the screens
+rotate on a timer whether the keys work or not.
+
+Plugin Changelog
+================
+
+1.0
+
+* Initial release

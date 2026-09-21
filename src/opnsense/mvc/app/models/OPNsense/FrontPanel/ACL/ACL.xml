@@ -1,0 +1,10 @@
+<acl>
+    <page-system-frontpanel>
+        <name>System: Front Panel</name>
+        <description>Allow access to the front panel settings, the screen preview and the panel test</description>
+        <patterns>
+            <pattern>ui/frontpanel/*</pattern>
+            <pattern>api/frontpanel/*</pattern>
+        </patterns>
+    </page-system-frontpanel>
+</acl>
