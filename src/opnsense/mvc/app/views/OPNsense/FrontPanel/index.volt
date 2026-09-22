@@ -86,6 +86,40 @@
 
         /* ------------------------------------------------------------------ small helpers */
 
+        /* Translatable text that lives in panels.json, not in this page: the name of
+           each known appliance, the sentence saying how far its panel has actually been
+           proven, and the notes beside it. lang._() resolves against a literal at compile
+           time, so each one is listed as its own key - and fp_data_text is GENERATED, by
+           tools/gen-data-strings.py, because a note added to panels.json and forgotten
+           here comes out in English on an Arabic page with nothing to say so. */
+        const fp_data_text = {
+            'Sophos XG / XGS front panel': "{{ lang._('Sophos XG / XGS front panel') }}",
+            'XG 330 rev 2 (smbios version 330r2), 2026-09-21: the display is verified - LCDd initialised the panel with no errors and the owner photographed live CPU, memory and uptime screens on it. The keypad is verified too: all four keys reported, measured one button at a time at ReportLevel 5 with the screen held still, three presses and three events each. The map above is that measurement and not LCDproc\'s default order, which puts Enter on 4,1 - where this panel has its down arrow.':
+                "{{ lang._('XG 330 rev 2 (smbios version 330r2), 2026-09-21: the display is verified - LCDd initialised the panel with no errors and the owner photographed live CPU, memory and uptime screens on it. The keypad is verified too: all four keys reported, measured one button at a time at ReportLevel 5 with the screen held still, three presses and three events each. The map above is that measurement and not LCDproc\'s default order, which puts Enter on 4,1 - where this panel has its down arrow.') }}",
+            'ConnectionType=ezio fixes the line at 2400 baud by itself - the driver reported \'serial: using speed: 2400\' with no Speed option set, so this entry deliberately does not write one.':
+                "{{ lang._('ConnectionType=ezio fixes the line at 2400 baud by itself - the driver reported \'serial: using speed: 2400\' with no Speed option set, so this entry deliberately does not write one.') }}",
+            'Heartbeat must stay off. This panel has no programmable character for LCDproc\'s heartbeat glyph and draws it as a solid black block in the corner.':
+                "{{ lang._('Heartbeat must stay off. This panel has no programmable character for LCDproc\'s heartbeat glyph and draws it as a solid black block in the corner.') }}",
+            'DelayMult=2 is what the owner settled on after trying 4: faster, and with RefreshDisplay redrawing the whole screen every few seconds it has not dropped a character.':
+                "{{ lang._('DelayMult=2 is what the owner settled on after trying 4: faster, and with RefreshDisplay redrawing the whole screen every few seconds it has not dropped a character.') }}",
+            'The panel is printed with a down arrow, ESC, an up arrow and ENTER, in that order, and that is the order of the matrix positions above.':
+                "{{ lang._('The panel is printed with a down arrow, ESC, an up arrow and ENTER, in that order, and that is the order of the matrix positions above.') }}",
+            'At 2400 baud the display and the keypad share the line: with screens changing every 3 seconds and a full redraw every 4, two thirds of the presses were lost. A quiet screen is what makes this keypad reliable: hold the screen still while measuring the keys, and keep the redraw interval wide on a panel whose keys are used.':
+                "{{ lang._('At 2400 baud the display and the keypad share the line: with screens changing every 3 seconds and a full redraw every 4, two thirds of the presses were lost. A quiet screen is what makes this keypad reliable: hold the screen still while measuring the keys, and keep the redraw interval wide on a panel whose keys are used.') }}",
+            'Sophos XG / XGS (panel not confirmed on this model)':
+                "{{ lang._('Sophos XG / XGS (panel not confirmed on this model)') }}",
+            'Nobody has confirmed this model yet. Press Test after applying: if the panel stays dark, try the driver list - mtc_s16209x lights a screen of this shape and cannot read a button, which is the honest fallback. The key map is copied from the XG 330 rev 2 and is a guess here: measure it with the key test before you trust which button is which.':
+                "{{ lang._('Nobody has confirmed this model yet. Press Test after applying: if the panel stays dark, try the driver list - mtc_s16209x lights a screen of this shape and cannot read a button, which is the honest fallback. The key map is copied from the XG 330 rev 2 and is a guess here: measure it with the key test before you trust which button is which.') }}",
+            'unrecognised appliance': "{{ lang._('unrecognised appliance') }}",
+            'No proposal for this machine. Choose a driver and a serial port by hand - the page lists the drivers this installation of LCDproc actually carries and the ports this machine actually has - then press Test. Sending a report of what worked is how this table grows.':
+                "{{ lang._('No proposal for this machine. Choose a driver and a serial port by hand - the page lists the drivers this installation of LCDproc actually carries and the ports this machine actually has - then press Test. Sending a report of what worked is how this table grows.') }}"
+        };
+
+        function fp_data(value) {
+            if (!value) { return ''; }
+            return fp_data_text[value] || value;
+        }
+
         function esc(value) {
             return $('<div/>').text(value === null || value === undefined ? '' : value).html();
         }
@@ -678,7 +712,8 @@
                 $body.append($('<p/>').text(
                     "{{ lang._('This appliance matches an entry in the table of known panels:') }}"
                 ));
-                $body.append($('<div class="fp-strong"/>').text(String(panel.display || report.match || '')));
+                $body.append($('<div class="fp-strong"/>').text(
+                    fp_data(String(panel.display || report.match || ''))));
 
                 const options = is_object(panel.options) ? panel.options : {};
                 const rows = [
@@ -704,7 +739,7 @@
                    has been confirmed and by whom, and a proposal read without that line is a
                    guess read as a fact. */
                 if (panel.confirmed) {
-                    $body.append(note(String(panel.confirmed)));
+                    $body.append(note(fp_data(String(panel.confirmed))));
                 } else {
                     $body.append(note(
                         "{{ lang._('Nobody has confirmed this proposal on this model yet. It is where to start, not what to expect.') }}",
@@ -720,7 +755,7 @@
             }
 
             if (panel.hint) {
-                $body.append(note(String(panel.hint)));
+                $body.append(note(fp_data(String(panel.hint))));
             }
         }
 

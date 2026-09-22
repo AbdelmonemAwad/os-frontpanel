@@ -89,36 +89,42 @@ jobs:
       - name: No real addresses, hardware identifiers or credentials
         run: python3 tools/check-private-data.py .
 
+      # Arabic belongs in the catalogue and nowhere else: a sentence written
+      # straight into a template cannot be reviewed by somebody who does not read
+      # it, cannot be changed without touching code, and is invisible to anything
+      # that counts what still needs translating.
+      - name: No Arabic outside the translation files
+        run: python3 tools/check-code-language.py .
+
   translations:
     name: translations
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # Text that lives in a data file reaches the page through a generated map. A note
-      # added to a JSON file and not regenerated here comes out in English on an Arabic
-      # page, and nothing in the build says so. That is the bug this step exists for; it
-      # has happened.
-      - name: The generated data-string map is current
+      # This job used to pass by doing nothing: both steps below began with "if the tool is
+      # not in this repository, print a line and exit 0", and neither tool was here - so the
+      # check was green on a plugin whose page asked the catalogue for 79 strings that no
+      # catalogue held. Their absence is a failure now, not a reason to skip.
+      - name: The pieces this job checks are present
         run: |
-          [ -f tools/gen-data-strings.py ] || { echo "not this plugin"; exit 0; }
-          python3 tools/gen-data-strings.py --check
+          for f in tools/gen-data-strings.py \
+                   tools/check-strings.py \
+                   src/opnsense/scripts/frontpanel/merge_ui_translations.py \
+                   src/opnsense/scripts/frontpanel/i18n/ui/source.json \
+                   src/opnsense/scripts/frontpanel/i18n/ui/ar_SA.json; do
+            [ -f "$f" ] || { echo "missing: $f"; exit 1; }
+            echo "ok $f"
+          done
 
-      - name: Every string the page asks for is in the catalogue
-        run: |
-          [ -f tools/check-strings.py ] || { echo "not this plugin"; exit 0; }
-          python3 tools/check-strings.py
-          python3 - <<'PY'
-          import glob, json, sys
-          name = sorted(glob.glob('src/opnsense/scripts/*/i18n/ui/source.json'))
-          if not name:
-              print('no catalogue here')
-              sys.exit(0)
-          src = json.load(open(name[0], encoding='utf-8'))
-          ar = json.load(open(name[0].replace('source.json', 'ar_SA.json'), encoding='utf-8'))
-          missing = [k for k in src if k not in ar]
-          for key in missing:
-              print('no Arabic for: %s' % key[:90])
-          print('%d msgids, %d translated' % (len(src), len(ar)))
-          sys.exit(1 if missing else 0)
-          PY
+      # Text that lives in panels.json reaches the page through a generated map. A note
+      # added to that file and not regenerated comes out in English on an Arabic page, and
+      # nothing else in the build says so.
+      - name: The generated data-string map is current
+        run: python3 tools/gen-data-strings.py --check
+
+      # Every string the page, the form and the model ask for, against what the catalogue
+      # holds - in both directions, because a msgid with no Arabic is as broken as an
+      # Arabic string with no msgid.
+      - name: Every string asked for is catalogued and translated
+        run: python3 tools/check-strings.py
