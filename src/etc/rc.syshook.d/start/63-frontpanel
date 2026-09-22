@@ -1,0 +1,15 @@
+#!/bin/sh
+# Copyright (C) 2026 Abdelmonem Awad <eg2@live.com>. BSD 2-Clause License.
+
+# Core updates replace the GUI translation catalogs; add the Front Panel strings back.
+#
+# 63 because the four plugins that do this on this machine run in order and each writes
+# the same files: 59-opnsense-arabic, 60-netreport, 61-opnsense-rtl, 62-linkhealth
+# (V: /usr/local/etc/rc.syshook.d/start, read 2026-09-22). Nothing here depends on the
+# order - each merge only adds msgids the catalogue does not already hold - but a number
+# of its own is what keeps two of them from being one file.
+ADDED=$(/usr/local/opnsense/scripts/frontpanel/merge_ui_translations.py 2> /dev/null)
+if [ -n "${ADDED}" ] && [ "${ADDED}" != "0" ]; then
+	# running php processes keep the old catalog in memory
+	configctl webgui restart > /dev/null 2>&1
+fi
