@@ -18,6 +18,14 @@
 # supervisors daemon(8) writes. 600 is daemon(8)'s own mode for a file it creates, so the entry
 # and the file agree on the first rotation as well as on the fiftieth.
 #
+# The third file is the service's own account of every start and stop it was asked for, and
+# it is the odd one out twice over. N, because nothing holds it open: each line is a separate
+# append by the rc script, so there is no process to tell about the rotation - and without N
+# newsyslog would send SIGHUP to syslogd for want of anything better to signal. And a much
+# smaller size, because the whole value of the file is that one boot can be read straight
+# through: at a dozen lines per start it would take years to reach even this.
+#
 # logfilename                        [owner:group]  mode  count  size  when  flags  [/pid_file]                              [sig_num]
 /var/log/frontpanel/LCDd.log         root:wheel     600   4      200   *     CJ     /var/run/frontpanel/LCDd.supervisor.pid   1
 /var/log/frontpanel/client.log       root:wheel     600   4      200   *     CJ     /var/run/frontpanel/client.supervisor.pid 1
+/var/log/frontpanel/trace.log        root:wheel     600   2      50    *     CJN

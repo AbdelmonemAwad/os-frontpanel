@@ -76,6 +76,11 @@ frontpanel_lcdd_pid="${frontpanel_rundir}/LCDd.pid"
 frontpanel_lcdd_super="${frontpanel_rundir}/LCDd.supervisor.pid"
 frontpanel_lcdd_log="${frontpanel_logdir}/LCDd.log"
 
+# Every decision this script takes, in order, with a timestamp. Not rotated aside by a
+# start the way LCDd's log is, which is the point of it: this is the file that still holds
+# the boot when somebody has already tried the start by hand twice.
+frontpanel_trace_log="${frontpanel_logdir}/trace.log"
+
 frontpanel_client_pid="${frontpanel_rundir}/client.pid"
 frontpanel_client_super="${frontpanel_rundir}/client.supervisor.pid"
 frontpanel_client_log="${frontpanel_logdir}/client.log"
@@ -101,6 +106,43 @@ stop_cmd="frontpanel_stop"
 status_cmd="frontpanel_status"
 extra_commands="reload"
 reload_cmd="frontpanel_reload"
+
+#
+# What this script did, somewhere a failed boot cannot swallow.
+#
+# It exists because the panel did not come up at a cold boot and left nothing at all to read
+# afterwards. That is not mysterious: the only file this service writes is LCDd's log, every
+# refusal above happens before LCDd is launched, and the first start by hand moves the
+# previous log aside. So the decisions are written down here as they are taken.
+#
+# Two details about the syslog line, both of which were got wrong first and found by trying
+# it (V: /usr/local/etc/syslog-ng.conf.d/syslog-ng-local.conf on OPNsense 26.7, 2026-09-22).
+#
+# daemon.notice and not daemon.info. What no other filter claims reaches /var/log/system
+# through f_local_system, and that rule ends with level(notice..emerg). An info line is
+# accepted by logger(1) and then dropped by the collector: written, delivered, and nowhere.
+#
+# The tag is "front-panel" and not "${name}". syslog-ng's program() is an unanchored regular
+# expression, and one of the rules ahead of the catch-all is program("ntp") - which matches
+# "fro-ntp-anel". Tagged with the service's own name, every line of this trace was filed in
+# /var/log/ntpd, where nobody investigating a dark panel would ever look. The hyphen is the
+# whole fix: it breaks the only substring of this name that another rule claims.
+#
+# The file is the second copy, and the one to read: a start straight through, in order,
+# instead of picked out of everything else the machine said that day. It is created here
+# rather than assumed, because the first line worth having is written before prestart makes
+# the directory.
+#
+# Always zero. A trace that could fail a start would be worse than no trace.
+#
+frontpanel_trace()
+{
+	/usr/bin/logger -t front-panel -p daemon.notice "$*" 2> /dev/null
+	[ -d "${frontpanel_logdir}" ] ||
+	    install -d -o root -g wheel -m 0750 "${frontpanel_logdir}" 2> /dev/null
+	echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "${frontpanel_trace_log}" 2> /dev/null
+	return 0
+}
 
 #
 # The pid in $1, but only when a process with that pid is alive. Everything else - no file,
@@ -178,11 +220,15 @@ frontpanel_prestart()
 {
 	local _report
 
+	frontpanel_trace "prestart: entered"
+
 	if [ ! -x "${frontpanel_lcdd}" ]; then
+		frontpanel_trace "prestart: refused, ${frontpanel_lcdd} is not there"
 		warn "${name}: LCDproc is not installed (${frontpanel_lcdd} is missing)"
 		return 1
 	fi
 	if [ ! -x "${frontpanel_client}" ]; then
+		frontpanel_trace "prestart: refused, ${frontpanel_client} is not there"
 		warn "${name}: the screen client is missing (${frontpanel_client})"
 		return 1
 	fi
@@ -204,6 +250,7 @@ frontpanel_prestart()
 	# the orphan away first: it is talking to nobody.
 	if [ -z "$(frontpanel_pid "${frontpanel_lcdd_pid}")" ] &&
 	    [ -n "$(frontpanel_pid "${frontpanel_client_pid}")" ]; then
+		frontpanel_trace "prestart: an orphaned client was running with no LCDd; stopping it"
 		frontpanel_terminate "$(frontpanel_pid "${frontpanel_client_pid}")" \
 		    "$(frontpanel_pid "${frontpanel_client_super}")"
 		rm -f "${frontpanel_client_pid}" "${frontpanel_client_super}"
@@ -216,13 +263,23 @@ frontpanel_prestart()
 	# and the panel in the rack cannot disagree. It also means a config.xml restored from a
 	# backup is honoured at the next boot instead of being quietly overruled by a stale file.
 	if ! _report=$("${frontpanel_client}" build-config 2>&1); then
+		frontpanel_trace "prestart: build-config refused: ${_report}"
 		warn "${name}: the LCDd configuration could not be generated: ${_report}"
 		return 1
 	fi
 	if [ ! -s "${frontpanel_conf}" ]; then
+		frontpanel_trace "prestart: build-config said nothing but wrote no ${frontpanel_conf}"
 		warn "${name}: ${frontpanel_conf} was not written"
 		return 1
 	fi
+
+	# Which port and which driver the generator chose, in its own words. At a boot that fails
+	# this is the difference between "it picked the wrong port" and "it picked the right one
+	# and the port was not ready", and neither is visible anywhere else afterwards.
+	# -E, not a basic expression with \| in it: that alternation is a GNU extension and
+	# this machine's grep is bsdgrep, which would take it literally and print nothing.
+	frontpanel_trace "prestart: ok, $(grep -iE '^(Device|Driver|Size)' \
+	    "${frontpanel_conf}" 2> /dev/null | tr '\n' ' ')"
 
 	# Nothing further is checked about that file here, and deliberately so. Whether the port
 	# exists, whether it is a serial port at all and whether /etc/ttys already gives it a login
@@ -253,6 +310,7 @@ frontpanel_await()
 frontpanel_start()
 {
 	echo "Starting ${name}."
+	frontpanel_trace "start: entered"
 
 	# The old log is moved aside before anything is started. The settings page answers "has a
 	# key on this panel ever been pressed" out of this file, and that answer is only about the
@@ -279,6 +337,7 @@ frontpanel_start()
 	    -p "${frontpanel_lcdd_pid}" -P "${frontpanel_lcdd_super}" \
 	    -o "${frontpanel_lcdd_log}" -H \
 	    "${frontpanel_lcdd}" -f -c "${frontpanel_conf}"; then
+		frontpanel_trace "start: daemon(8) would not launch LCDd"
 		warn "${name}: LCDd could not be started"
 		return 1
 	fi
@@ -289,6 +348,8 @@ frontpanel_start()
 	# pressed Start what went wrong, in the driver's own words, and leaving it in a log nobody
 	# opens.
 	if ! frontpanel_await "${frontpanel_lcdd_pid}" > /dev/null; then
+		frontpanel_trace "start: LCDd did not stay up: $(tail -n 3 \
+		    "${frontpanel_lcdd_log}" 2> /dev/null | tr '\n' ' ')"
 		warn "${name}: LCDd did not stay up. Its last words were:"
 		tail -n 10 "${frontpanel_lcdd_log}" 2> /dev/null
 		return 1
@@ -298,6 +359,7 @@ frontpanel_start()
 	    -p "${frontpanel_client_pid}" -P "${frontpanel_client_super}" \
 	    -o "${frontpanel_client_log}" -H \
 	    "${frontpanel_client}" client; then
+		frontpanel_trace "start: daemon(8) would not launch the screen client"
 		warn "${name}: the screen client could not be started"
 		frontpanel_terminate "$(frontpanel_pid "${frontpanel_lcdd_pid}")" \
 		    "$(frontpanel_pid "${frontpanel_lcdd_super}")"
@@ -305,6 +367,8 @@ frontpanel_start()
 	fi
 
 	if ! frontpanel_await "${frontpanel_client_pid}" > /dev/null; then
+		frontpanel_trace "start: the screen client did not stay up: $(tail -n 3 \
+		    "${frontpanel_client_log}" 2> /dev/null | tr '\n' ' ')"
 		warn "${name}: the screen client did not stay up. Its last words were:"
 		tail -n 10 "${frontpanel_client_log}" 2> /dev/null
 		# LCDd would be left holding a panel that nobody is writing to, sitting in the rack
@@ -315,6 +379,8 @@ frontpanel_start()
 		return 1
 	fi
 
+	frontpanel_trace "start: up, LCDd $(frontpanel_pid "${frontpanel_lcdd_pid}")" \
+	    "client $(frontpanel_pid "${frontpanel_client_pid}")"
 	return 0
 }
 
@@ -326,11 +392,13 @@ frontpanel_stop()
 	_client=$(frontpanel_pid "${frontpanel_client_pid}")
 
 	if [ -z "${_lcdd}" ] && [ -z "${_client}" ]; then
+		frontpanel_trace "stop: nothing was running"
 		echo "${name} is not running."
 		return 0
 	fi
 
 	echo "Stopping ${name}."
+	frontpanel_trace "stop: stopping LCDd ${_lcdd:-none}, client ${_client:-none}"
 
 	# This order is the whole reason the two processes are not simply handed to rc.subr.
 	#
@@ -346,6 +414,7 @@ frontpanel_stop()
 	rm -f "${frontpanel_client_pid}" "${frontpanel_client_super}" \
 	    "${frontpanel_lcdd_pid}" "${frontpanel_lcdd_super}"
 
+	frontpanel_trace "stop: done"
 	return 0
 }
 
@@ -394,4 +463,29 @@ frontpanel_reload()
 	frontpanel_start
 }
 
+#
+# Outside every command, because of what rc.subr does when the switch is off: during a quiet
+# boot it declines without a word. "the script was never run" and "the script ran and chose
+# not to start" then look exactly alike from outside, and they have nothing in common as
+# causes. One line here tells them apart, and carries the switch it was read with.
+#
+# status is left out of it. The services page asks for it every few seconds, and a trace
+# that filled the system log with the answer to a question nobody asked would be turned off
+# within a week - which is the same as not having one at the boot it was written for.
+#
+case "$1" in
+*status)	;;
+*)	frontpanel_trace "$1: invoked with ${rcvar}=${frontpanel_enable}" ;;
+esac
+
 run_rc_command "$1"
+_frontpanel_rc=$?
+
+case "$1" in
+*status)	;;
+*)	frontpanel_trace "$1: finished, status ${_frontpanel_rc}" ;;
+esac
+
+# What run_rc_command returned is what this script returns: the services page reads the
+# status command's exit code, and configd reads a start's.
+exit ${_frontpanel_rc}
