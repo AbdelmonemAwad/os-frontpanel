@@ -42,6 +42,9 @@ cp -R "${HERE}/src/" /usr/local/
 find /usr/local/opnsense/scripts/frontpanel -type f -name '*.py' -exec chmod 755 {} +
 find /usr/local/opnsense/scripts/frontpanel -type f ! -name '*.py' -exec chmod 644 {} +
 chmod 755 /usr/local/etc/rc.d/frontpanel
+# the boot hook that puts the GUI strings back after a core update has replaced the
+# catalogues; /etc/rc runs it as a program, so it needs the bit like the rc script above
+chmod 755 /usr/local/etc/rc.syshook.d/start/63-frontpanel
 chmod 644 /usr/local/etc/newsyslog.conf.d/frontpanel
 chmod 644 /usr/local/opnsense/service/conf/actions.d/actions_frontpanel.conf
 
