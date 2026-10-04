@@ -56,6 +56,46 @@
         "At 2400 baud the display and the keypad share the line: with screens changing every 3 seconds and a full redraw every 4, two thirds of the presses were lost. A quiet screen is what makes this keypad reliable: hold the screen still while measuring the keys, and keep the redraw interval wide on a panel whose keys are used."
       ]
     },
+    "sophos-xgs-17": {
+      "display": "Sophos XGS front panel (SMBIOS XGS / 17, the XGS 3300)",
+      "comment": [
+        "Same panel family as the XG 330 entry above - an EZIO serial bridge, the HD44780 command set",
+        "behind an 0xFE escape, on /dev/cuau1 - but NOT the same line rate, and that difference is the",
+        "whole reason this entry exists. Matched on the SMBIOS version as well as the product, so it",
+        "claims only the identity it was confirmed on."
+      ],
+      "match": {
+        "maker": "^Sophos$",
+        "product": "^XGS$",
+        "version": "^17$"
+      },
+      "driver": "hd44780",
+      "options": {
+        "ConnectionType": "ezio",
+        "Device": "/dev/cuau1",
+        "Size": "16x2",
+        "Keypad": "yes",
+        "Speed": "9600"
+      },
+      "keymap": {
+        "KeyMatrix_4_1": "Down",
+        "KeyMatrix_4_2": "Escape",
+        "KeyMatrix_4_3": "Up",
+        "KeyMatrix_4_4": "Enter"
+      },
+      "speed": {
+        "bus_delay": 2,
+        "refresh_seconds": 4,
+        "heartbeat": false
+      },
+      "confirmed": "XGS 3300 (smbios XGS, version 17), 2026-10-02: the display is verified at 9600 - LCDd with hd44780, ConnectionType=ezio and Speed=9600 drew two lines of text the owner read on the panel as correct. The keypad has NOT been measured on this model: the map above is copied from the XG 330 rev 2 and is a guess here until the key test is run.",
+      "notes": [
+        "Speed=9600 is required. ConnectionType=ezio on its own fixes the line at 2400, which is right for the XG 330 rev 2 and wrong here: at 2400 this panel draws scattered x-with-a-bar characters - HD44780 code 0xF8 - which is the signature of bytes arriving at a quarter of the receiver's rate. A long start bit fills the low three bits with zeros and the next long bit fills the rest with ones.",
+        "The vendor's own daemon sets the port with `stty ispeed 2400`. That sets only the INPUT speed, and a 16550-class UART has a single divisor, so on the vendor's system the line stays at the 9600 default. Reading the vendor's line setting literally is what kept this panel garbled for a week.",
+        "A rate sweep that sets the speed on the .init device and then writes through a fresh open of the port is not a reliable way to test this - that method is how every candidate rate once looked wrong. LCDd opens the port once and sets it with tcsetattr, which is why the decisive test was LCDd itself with Speed set.",
+        "Heartbeat stays off, as on the XG 330: the panel has no programmable character for it."
+      ]
+    },
     "sophos-xg-family": {
       "display": "Sophos XG / XGS (panel not confirmed on this model)",
       "comment": [
