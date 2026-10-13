@@ -73,7 +73,7 @@
       "options": {
         "ConnectionType": "ezio",
         "Device": "/dev/cuau1",
-        "Size": "16x2",
+        "Size": "20x2",
         "Keypad": "yes",
         "Speed": "9600"
       },
@@ -88,7 +88,7 @@
         "refresh_seconds": 4,
         "heartbeat": false
       },
-      "confirmed": "XGS 3300 (smbios XGS, version 17), 2026-10-02: the display is verified at 9600 - LCDd with hd44780, ConnectionType=ezio and Speed=9600 drew two lines of text the owner read on the panel as correct. The keypad has NOT been measured on this model: the map above is copied from the XG 330 rev 2 and is a guess here until the key test is run.",
+      "confirmed": "XGS 3300 (smbios XGS, version 17), 2026-10-02: the display is verified at 9600 - LCDd with hd44780, ConnectionType=ezio and Speed=9600 drew two lines of text the owner read on the panel as correct. The keypad has NOT been measured on this model: the map above is copied from the XG 330 rev 2 and is a guess here until the key test is run. Size: 20 columns by 2 lines - the owner set 20x2 on the settings page on 2026-10-13 and the panel paints it, and the GIFAR bridge on this board drives a 20x2 HD44780 (os-xgs-npu's hardware page); the entry had said 16x2, the XG 330's size, until then.",
       "notes": [
         "Speed=9600 is required. ConnectionType=ezio on its own fixes the line at 2400, which is right for the XG 330 rev 2 and wrong here: at 2400 this panel draws scattered x-with-a-bar characters - HD44780 code 0xF8 - which is the signature of bytes arriving at a quarter of the receiver's rate. A long start bit fills the low three bits with zeros and the next long bit fills the rest with ones.",
         "The vendor's own daemon sets the port with `stty ispeed 2400`. That sets only the INPUT speed, and a 16550-class UART has a single divisor, so on the vendor's system the line stays at the 9600 default. Reading the vendor's line setting literally is what kept this panel garbled for a week.",
