@@ -187,11 +187,21 @@ def smbios():
         if line.startswith('smbios.'):
             key, _, value = line.partition('=')
             values[key.strip()] = value.strip().strip('"')
-    return {
+    fields = {
         'maker': values.get('smbios.planar.maker') or values.get('smbios.system.maker', ''),
         'product': values.get('smbios.planar.product') or values.get('smbios.system.product', ''),
         'version': values.get('smbios.planar.version') or values.get('smbios.system.version', ''),
     }
+    # The board block first, as the sibling plugins read it; but a board whose version is a
+    # bare number is giving its own revision, not the appliance's model (the XGS 3300: planar
+    # "XGS" / "17", system "XGS" / "3300r1"). The product and version carried are then the
+    # system block's, 'board' keeps what the board said, and an entry may match either.
+    system_version = values.get('smbios.system.version', '')
+    fields['board'] = ' '.join(x for x in (fields['product'], fields['version']) if x)
+    if fields['version'].strip().isdigit() and system_version and system_version != fields['version']:
+        fields['product'] = values.get('smbios.system.product') or fields['product']
+        fields['version'] = system_version
+    return fields
 
 
 def match_panel(table=None, fields=None):

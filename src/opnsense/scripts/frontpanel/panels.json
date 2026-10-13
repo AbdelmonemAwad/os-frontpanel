@@ -57,7 +57,7 @@
       ]
     },
     "sophos-xgs-17": {
-      "display": "Sophos XGS front panel (SMBIOS XGS / 17, the XGS 3300)",
+      "display": "Sophos XGS front panel (the XGS 3300: SMBIOS XGS, board 17 / system 3300r1)",
       "comment": [
         "Same panel family as the XG 330 entry above - an EZIO serial bridge, the HD44780 command set",
         "behind an 0xFE escape, on /dev/cuau1 - but NOT the same line rate, and that difference is the",
@@ -67,7 +67,7 @@
       "match": {
         "maker": "^Sophos$",
         "product": "^XGS$",
-        "version": "^17$"
+        "version": "^(17|3300r1)$"
       },
       "driver": "hd44780",
       "options": {
@@ -144,20 +144,123 @@
       "for and says in its answer that it could not check the option names."
     ],
     "hd44780": [
-      "ConnectionType", "Port", "Device", "Speed", "Keypad", "Contrast", "Brightness",
-      "OffBrightness", "Backlight", "OutputPort", "Lastline", "Size", "vspan", "ExtendedMode",
-      "LineAddress", "CharMap", "DelayMult", "KeepAliveDisplay", "RefreshDisplay", "DelayBus",
-      "KeyMatrix_4_1", "KeyMatrix_4_2", "KeyMatrix_4_3", "KeyMatrix_4_4"
+      "ConnectionType",
+      "Port",
+      "Device",
+      "Speed",
+      "Keypad",
+      "Contrast",
+      "Brightness",
+      "OffBrightness",
+      "Backlight",
+      "OutputPort",
+      "Lastline",
+      "Size",
+      "vspan",
+      "ExtendedMode",
+      "LineAddress",
+      "CharMap",
+      "DelayMult",
+      "KeepAliveDisplay",
+      "RefreshDisplay",
+      "DelayBus",
+      "KeyMatrix_4_1",
+      "KeyMatrix_4_2",
+      "KeyMatrix_4_3",
+      "KeyMatrix_4_4"
     ],
-    "mtc_s16209x": ["Device", "Brightness", "Reboot"],
-    "CFontz": ["Device", "Size", "Contrast", "Brightness", "OffBrightness", "Speed", "NewFirmware", "Reboot"],
-    "CFontzPacket": ["Model", "Device", "Contrast", "Brightness", "OffBrightness", "Reboot", "USB", "OldFirmware", "Size", "Speed"],
-    "CwLnx": ["Model", "Device", "Size", "Speed", "Reboot", "Keypad", "keypad_test_mode"],
-    "serialVFD": ["Type", "use_parallel", "Port", "PortWait", "Device", "Size", "Brightness", "OffBrightness", "Speed", "ISO_8859_1"],
-    "picolcd": ["KeyTimeout", "KeyRepeatDelay", "KeyRepeatInterval", "Backlight", "Brightness", "OffBrightness", "Contrast", "LinkLights", "Keylights"],
-    "glcd": ["ConnectionType", "Size", "CellSize", "useFT2", "normal_font", "fontHasIcons", "Contrast", "Brightness", "OffBrightness", "KeyRepeatDelay", "KeyRepeatInterval", "KeyMap_A", "KeyMap_B", "KeyMap_C", "KeyMap_D", "Port", "bidirectional", "delayBus"],
-    "text": ["Size"],
-    "curses": ["Foreground", "Background", "Backlight", "Size", "TopLeftX", "TopLeftY", "UseACS", "DrawBorder"]
+    "mtc_s16209x": [
+      "Device",
+      "Brightness",
+      "Reboot"
+    ],
+    "CFontz": [
+      "Device",
+      "Size",
+      "Contrast",
+      "Brightness",
+      "OffBrightness",
+      "Speed",
+      "NewFirmware",
+      "Reboot"
+    ],
+    "CFontzPacket": [
+      "Model",
+      "Device",
+      "Contrast",
+      "Brightness",
+      "OffBrightness",
+      "Reboot",
+      "USB",
+      "OldFirmware",
+      "Size",
+      "Speed"
+    ],
+    "CwLnx": [
+      "Model",
+      "Device",
+      "Size",
+      "Speed",
+      "Reboot",
+      "Keypad",
+      "keypad_test_mode"
+    ],
+    "serialVFD": [
+      "Type",
+      "use_parallel",
+      "Port",
+      "PortWait",
+      "Device",
+      "Size",
+      "Brightness",
+      "OffBrightness",
+      "Speed",
+      "ISO_8859_1"
+    ],
+    "picolcd": [
+      "KeyTimeout",
+      "KeyRepeatDelay",
+      "KeyRepeatInterval",
+      "Backlight",
+      "Brightness",
+      "OffBrightness",
+      "Contrast",
+      "LinkLights",
+      "Keylights"
+    ],
+    "glcd": [
+      "ConnectionType",
+      "Size",
+      "CellSize",
+      "useFT2",
+      "normal_font",
+      "fontHasIcons",
+      "Contrast",
+      "Brightness",
+      "OffBrightness",
+      "KeyRepeatDelay",
+      "KeyRepeatInterval",
+      "KeyMap_A",
+      "KeyMap_B",
+      "KeyMap_C",
+      "KeyMap_D",
+      "Port",
+      "bidirectional",
+      "delayBus"
+    ],
+    "text": [
+      "Size"
+    ],
+    "curses": [
+      "Foreground",
+      "Background",
+      "Backlight",
+      "Size",
+      "TopLeftX",
+      "TopLeftY",
+      "UseACS",
+      "DrawBorder"
+    ]
   },
   "speed_options": {
     "comment": [

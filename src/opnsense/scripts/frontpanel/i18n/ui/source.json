@@ -141,5 +141,6 @@
  "Speed=9600 is required. ConnectionType=ezio on its own fixes the line at 2400, which is right for the XG 330 rev 2 and wrong here: at 2400 this panel draws scattered x-with-a-bar characters - HD44780 code 0xF8 - which is the signature of bytes arriving at a quarter of the receiver's rate. A long start bit fills the low three bits with zeros and the next long bit fills the rest with ones.",
  "The vendor's own daemon sets the port with `stty ispeed 2400`. That sets only the INPUT speed, and a 16550-class UART has a single divisor, so on the vendor's system the line stays at the 9600 default. Reading the vendor's line setting literally is what kept this panel garbled for a week.",
  "A rate sweep that sets the speed on the .init device and then writes through a fresh open of the port is not a reliable way to test this - that method is how every candidate rate once looked wrong. LCDd opens the port once and sets it with tcsetattr, which is why the decisive test was LCDd itself with Speed set.",
- "Heartbeat stays off, as on the XG 330: the panel has no programmable character for it."
+ "Heartbeat stays off, as on the XG 330: the panel has no programmable character for it.",
+ "Sophos XGS front panel (the XGS 3300: SMBIOS XGS, board 17 / system 3300r1)"
 ]
