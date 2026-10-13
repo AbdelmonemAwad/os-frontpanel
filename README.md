@@ -92,7 +92,11 @@ your own machine is two commands, and [docs/panels.md](docs/panels.md) walks thr
 
 ## Nothing runs until you turn it on
 
-`enabled` is off after installation, and the plugin applies nothing by itself.
+`enabled` is off after installation, and the plugin applies nothing by itself. Once it is on it
+stays on across reboots: OPNsense starts the panel from its own boot sequence
+(`plugins_configure('bootup')`), not from the `rc.conf.d` switch the first version relied on, which
+nothing on an OPNsense boot reads - measured, on two appliances, as a panel that was dark after
+every reboot until somebody opened this page.
 
 When the page opens it looks your appliance up in its table and, if it finds a match, **proposes** a
 driver and its settings — driver name, device, size, whether to poll the keys. It fills the form in
@@ -244,9 +248,11 @@ reboot flag, and nothing else). The page says so rather than pretending.
 
 ## Other appliances
 
-The table this plugin ships, `panels.json`, has **one confirmed entry**: the Sophos XG 330 rev 2
+The table this plugin ships, `panels.json`, has **two confirmed entries**: the Sophos XG 330 rev 2
 above — its display watched and photographed, its four keys measured one at a time, and every word of
-that written into the entry so the page can show it to whoever is about to press Apply.
+that written into the entry so the page can show it to whoever is about to press Apply — and the
+Sophos XGS 3300, the same panel family at 9600 baud rather than 2400, its display verified and its
+keys not yet measured, which the entry says.
 
 Everything else is a choice the page offers you, not hardware somebody has tested. The settings page
 lists the 36 drivers the `lcdproc` package installs, and "support for other appliances" means exactly
