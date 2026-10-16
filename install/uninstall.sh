@@ -15,6 +15,8 @@ if [ -x /usr/local/etc/rc.d/frontpanel ]; then
 fi
 
 rm -f /usr/local/etc/rc.d/frontpanel
+rm -f /usr/local/share/pkg/triggers/os-frontpanel.ucl
+rm -f /usr/local/etc/rc.syshook.d/start/63-frontpanel
 rm -f /usr/local/etc/newsyslog.conf.d/frontpanel
 rm -f /usr/local/opnsense/service/conf/actions.d/actions_frontpanel.conf
 rm -rf /usr/local/opnsense/scripts/frontpanel

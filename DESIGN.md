@@ -195,8 +195,10 @@ optional.
 
 ```
 Makefile, pkg-descr, README.md, DESIGN.md
-install/{install.sh,uninstall.sh}
+install/{install.sh,uninstall.sh,enable.sh}
 src/etc/rc.d/frontpanel                      the service
+src/etc/rc.syshook.d/start/63-frontpanel     the GUI strings merged again at boot
+src/share/pkg/triggers/os-frontpanel.ucl     the same, the moment an update writes a catalog
 src/opnsense/service/conf/actions.d/actions_frontpanel.conf
 src/opnsense/scripts/frontpanel/{frontpanel.py,screens.py,config.py,panels.json,keys.py}
 src/opnsense/mvc/app/models/OPNsense/FrontPanel/{FrontPanel.xml,FrontPanel.php,Menu/Menu.xml,ACL/ACL.xml}
@@ -212,6 +214,8 @@ Menu: **System → Front Panel** (it is about the appliance, not about the netwo
 - It does not claim a port that something else is using; it checks first, and `/dev/cuau1` carries
   no console on this machine (**V**: `/etc/ttys` runs a getty there only `onifconsole`, and the
   console is `ttyu0`).
-- It does not turn itself on after installation.
+- It does not turn itself on after installation. `install/enable.sh` turns it on when something
+  asks - an image's first boot - and only where the appliance table's entry for this machine is
+  confirmed on the hardware; anywhere else it leaves the panel off and says why.
 - It does not promise keys on hardware where the driver cannot read them.
 - It does not depend on os-linkhealth, and os-linkhealth does not know it exists.
