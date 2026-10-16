@@ -14,6 +14,11 @@ if [ -x /usr/local/etc/rc.d/frontpanel ]; then
     /usr/local/etc/rc.d/frontpanel onestop || true
 fi
 
+# The plugin hook goes first, before anything it calls. OPNsense loads every file in
+# plugins.inc.d and calls its hooks at boot, and frontpanel_services() builds the plugin's
+# model: left behind without the classes below, it is a fatal error that stops rc.bootup before
+# the network - which is what it did on an XGS 136 (issue 11).
+rm -f /usr/local/etc/inc/plugins.inc.d/frontpanel.inc
 rm -f /usr/local/etc/rc.d/frontpanel
 rm -f /usr/local/share/pkg/triggers/os-frontpanel.ucl
 rm -f /usr/local/etc/rc.syshook.d/start/63-frontpanel
