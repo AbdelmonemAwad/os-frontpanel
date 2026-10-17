@@ -1111,7 +1111,17 @@
         direction: ltr;
         white-space: nowrap;
         overflow-x: auto;
-        padding: 6px 0;
+        /* Drawn as the glass it stands for: a blue backlight and light characters, the way these
+           character panels look on the appliance, whatever the page's theme. The colours are the
+           panel's and not the theme's, so they are written here rather than taken from a class. */
+        display: inline-block;
+        max-width: 100%;
+        padding: 8px 10px;
+        margin: 2px 0 4px;
+        background: #163f7a;
+        color: #e9f2ff;
+        border-radius: 4px;
+        box-shadow: inset 0 0 0 3px #0e2c57, inset 0 2px 8px rgba(0, 0, 0, 0.45);
     }
 
     /* The grid has to opt out of the rule above, and this is not a nicety. `unicode-bidi:
@@ -1139,7 +1149,9 @@
         text-align: center;
         font-family: monospace;
         font-size: 115%;
-        border: 1px solid rgba(127, 127, 127, 0.35);
+        /* the character cells of the glass: a faint grid, light enough to read past */
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        background: rgba(255, 255, 255, 0.04);
         /* a hair of negative margin, so two neighbouring cells share one line rather than
            drawing two and making the grid look like a spreadsheet */
         margin-inline-end: -1px;
