@@ -470,6 +470,7 @@
         function reload_preview(done) {
             ajaxGet('/api/frontpanel/service/preview', {}, function (data) {
                 preview_doc = is_object(data) ? data : null;
+                draw_cards();
                 draw_preview();
                 update_rotation_note();
                 if (typeof done === 'function') {
@@ -520,7 +521,44 @@
             return is_object(diagnostics_doc.panels) ? diagnostics_doc.panels : diagnostics_doc;
         }
 
+        /* Summary cards above the tabs, as on the coprocessor's pages: the service, the panel as it
+           is set, the screens in the rotation and the keys - each redrawn when what it reads
+           changes, and blank until it has been read. */
+        let service_status = null;
+
+        function card(cls, icon, key, value, sub) {
+            return $('<div class="fp-card"/>').addClass(cls)
+                .append($('<i class="fa"/>').addClass(icon))
+                .append($('<div class="k"/>').text(key))
+                .append($('<div class="v"/>').text(value))
+                .append($('<div class="s"/>').text(sub || ' '));
+        }
+
+        function draw_cards() {
+            const tone = {'running': 'ok', 'stopped': 'bad', 'disabled': '', 'unknown': 'warn'};
+            const state = String(service_status || 'unknown');
+            const driver = String($('#frontpanel\\.general\\.driver').val() || '');
+            const size = String($('#frontpanel\\.general\\.size').val() || '');
+            const device = String($('#frontpanel\\.general\\.device').val() || '');
+            const screens = (preview_doc !== null && $.isArray(preview_doc.screens)) ? preview_doc.screens : null;
+            const shown = screens === null ? null : screens.filter(function (entry) {
+                return entry.enabled !== false && entry.available !== false;
+            }).length;
+            const keypad = $('#frontpanel\\.general\\.keypad').is(':checked');
+            $('#fp-cards').empty()
+                .append(card(service_status === null ? '' : (tone[state] || ''), 'fa-power-off', "{{ lang._('Service') }}",
+                    service_status === null ? '…' : (service_text[state] || service_text.unknown), ''))
+                .append(card(driver ? 'ok' : 'warn', 'fa-desktop', "{{ lang._('Panel') }}",
+                    [driver, size].filter(Boolean).join(' ') || '…', device))
+                .append(card(shown ? 'ok' : (shown === 0 ? 'warn' : ''), 'fa-th-list', "{{ lang._('Screens') }}",
+                    shown === null ? '…' : String(shown), "{{ lang._('in the rotation, with something to show') }}"))
+                .append(card(keypad ? 'ok' : '', 'fa-keyboard-o', "{{ lang._('Keys') }}",
+                    keypad ? "{{ lang._('read') }}" : "{{ lang._('not read') }}", "{{ lang._('the buttons beside the screen') }}"));
+        }
+
         function draw_service_state(status) {
+            service_status = status || 'unknown';
+            draw_cards();
             const state = String(status || 'unknown');
             const $line = $('#service-state').empty();
             $line.append(label(service_text[state] || service_text.unknown,
@@ -904,6 +942,7 @@
 
         const data_get_map = {'frm_general': '/api/frontpanel/settings/get'};
         mapDataToFormUI(data_get_map).done(function () {
+            draw_cards();
             /* the choices have to be in the select before the tokeniser reads it, or the list it
                offers is only the screens that were already chosen */
             prepare_rotation();
@@ -1054,6 +1093,19 @@
     .fp-help {
         display: none;
     }
+
+    /* Summary cards, the same as the coprocessor's pages: the theme's text and a faint tint of it. */
+    .fp-cards { display: flex; flex-wrap: wrap; gap: 12px; padding: 0 0 15px; }
+    .fp-card { flex: 1 1 200px; min-width: 190px; border: 1px solid rgba(128, 128, 128, 0.25);
+               border-inline-start: 4px solid #9e9e9e; border-radius: 3px; padding: 10px 14px;
+               background-color: rgba(128, 128, 128, 0.04); }
+    .fp-card.ok { border-inline-start-color: #5cb85c; }
+    .fp-card.warn { border-inline-start-color: #f0ad4e; }
+    .fp-card.bad { border-inline-start-color: #d9534f; }
+    .fp-card .k { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; opacity: 0.6; }
+    .fp-card .v { font-size: 19px; font-weight: 600; line-height: 1.3; margin: 2px 0; }
+    .fp-card .s { font-size: 12px; opacity: 0.7; }
+    .fp-card .fa { opacity: 0.35; float: inline-end; font-size: 18px; margin-top: 2px; }
 
     .fp-note {
         font-size: 85%;
@@ -1217,6 +1269,8 @@
         margin-inline-start: 4px;
     }
 </style>
+
+<div class="fp-cards" id="fp-cards"></div>
 
 <ul class="nav nav-tabs" data-tabs="tabs" id="maintabs">
     <li><a data-toggle="tab" href="#settings">{{ lang._('Settings') }}</a></li>
