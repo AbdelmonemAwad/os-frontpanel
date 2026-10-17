@@ -127,9 +127,16 @@
                 "{{ lang._('No proposal for this machine. Choose a driver and a serial port by hand - the page lists the drivers this installation of LCDproc actually carries and the ports this machine actually has - then press Test. Sending a report of what worked is how this table grows.') }}"
         };
 
+        /* Volt escapes what lang._() returns, so an apostrophe inside a translated string arrives
+           here as &#039;, and the API escapes every string it returns the same way. Both are read
+           back to plain text before .text() is handed them, or the entity is what gets shown. */
+        function plain(value) {
+            return $('<textarea/>').html(value === null || value === undefined ? '' : String(value)).text();
+        }
+
         function fp_data(value) {
             if (!value) { return ''; }
-            return fp_data_text[value] || value;
+            return plain(fp_data_text[value] || value);
         }
 
         function esc(value) {
@@ -187,7 +194,34 @@
         }
 
         function note(text, classname) {
-            return $('<div/>').addClass('fp-note ' + (classname || '')).text(text);
+            return $('<div/>').addClass('fp-note ' + (classname || '')).text(plain(text));
+        }
+
+        /* The long explanations sit under "full help", as they do on the settings tab: one switch
+           on each of the other two tabs, both showing the same state, and a note drawn after the
+           switch was turned is drawn in the state it was turned to. */
+        let help_on = false;
+
+        function help_note(text) {
+            return $('<div class="help-block fp-help"/>').text(plain(text)).toggle(help_on);
+        }
+
+        $('.fp-help-toggle').click(function (event) {
+            event.preventDefault();
+            help_on = !help_on;
+            $('.fp-help-toggle > i')
+                .toggleClass('fa-toggle-on text-success', help_on)
+                .toggleClass('fa-toggle-off text-danger', !help_on);
+            $('.fp-help').toggle(help_on);
+        });
+
+        /* one row of a diagnostics section: what is read on the left, the reading on the right */
+        function row(title, $value) {
+            return $('<tr/>').append($('<td/>').text(title)).append($('<td/>').append($value));
+        }
+
+        function wide_row($content) {
+            return $('<tr/>').append($('<td colspan="2"/>').append($content));
         }
 
         /* ------------------------------------------------------------------ the display */
@@ -533,8 +567,9 @@
 
             const seen = $.isArray(report.keys) ? report.keys : [];
             if (seen.length === 0) {
-                $body.append(note(
-                    "{{ lang._('No key has been reported yet. The keys are polled rather than volunteered, so silence here means the panel answered the poll with nothing - press one and look again. If nothing ever arrives, this panel may simply be unable to report a key, which is a limit of the hardware and not a fault.') }}"
+                $body.append(note("{{ lang._('No key has been reported yet.') }}"));
+                $body.append(help_note(
+                    "{{ lang._('The keys are polled rather than volunteered, so silence here means the panel answered the poll with nothing - press one and look again. If nothing ever arrives, this panel may simply be unable to report a key, which is a limit of the hardware and not a fault.') }}"
                 ));
             } else {
                 const $table = $('<table class="table table-condensed fp-keys"/>');
@@ -582,7 +617,7 @@
             const covered = log !== null && log.report_level !== null && log.report_level !== undefined &&
                 log.reports_keys === false;
             if (covered) {
-                $body.append(note(
+                $body.append(help_note(
                     "{{ lang._('LCDproc is writing its log at level {level}, and it names a key only at level {needed} or higher. What is shown here came from the screen client, which is the stronger evidence anyway.') }}"
                         .replace('{level}', String(log.report_level))
                         .replace('{needed}', String(KEY_REPORT_LEVEL))
@@ -592,7 +627,7 @@
             /* Anything else the firewall wanted to say about the keys that this page has no
                sentence of its own for. Shown as the script wrote it rather than dropped. */
             if (report.note && seen.length > 0 && !covered) {
-                $body.append(note(String(report.note), 'fp-muted'));
+                $body.append(help_note(String(report.note)));
             }
         }
 
@@ -604,7 +639,7 @@
                serial port" is a serious thing to tell somebody, and it must not be said on the
                strength of not having looked. */
             if (report === null) {
-                $body.append(note("{{ lang._('Asking the firewall...') }}"));
+                $body.append(wide_row(note("{{ lang._('Asking the firewall...') }}")));
                 return;
             }
             const entries = $.isArray(report.devices) ? report.devices : [];
@@ -617,23 +652,23 @@
             });
 
             if (devices.length === 0) {
-                $body.append(note(
+                $body.append(wide_row(note(
                     "{{ lang._('This machine reports no serial port. A panel on a port that is not there cannot be written to.') }}"
-                ));
+                )));
             } else {
-                const $list = $('<div/>');
                 entries.forEach(function (entry) {
                     const device = is_object(entry) ? String(entry.device || '') : String(entry);
                     if (device === '') {
                         return;
                     }
-                    const $item = $('<div class="fp-port-row"/>');
-                    $item.append($('<span class="fp-tech fp-strong"/>').text(device));
+                    const $item = $('<div/>');
                     /* A port with a login prompt on it is a port this plugin must not claim: the
                        two would write over each other, and the one that loses is whoever was
                        using the console. */
-                    if (is_object(entry) && entry.getty) {
-                        $item.append(' ').append(label("{{ lang._('a login prompt is configured here') }}", 'label-warning'));
+                    if (!(is_object(entry) && entry.getty)) {
+                        $item.append($('<span class="fp-muted"/>').text("{{ lang._('no login prompt configured') }}"));
+                    } else {
+                        $item.append(label("{{ lang._('a login prompt is configured here') }}", 'label-warning'));
                         /* What the firewall read about the port, not a sentence about it: the
                            name /etc/ttys knows it by, the command on that line, the flags beside
                            it and the line itself. The line is the part worth showing, because it
@@ -647,9 +682,10 @@
                             $item.append($('<div class="fp-note fp-tech"/>').text(line));
                         }
                     }
-                    $list.append($item);
+                    $body.append($('<tr/>')
+                        .append($('<td/>').append($('<span class="fp-tech fp-strong"/>').text(device)))
+                        .append($('<td/>').append($item)));
                 });
-                $body.append($list);
             }
 
             /* Which of the 36 names in the driver list this installation actually carries. The
@@ -659,10 +695,10 @@
             const installed = $.isArray(report.drivers) ? report.drivers : [];
             const driver = String($('#frontpanel\\.general\\.driver').val() || '');
             if (installed.length > 0 && driver !== '' && $.inArray(driver, installed) === -1) {
-                $body.append(note(
+                $body.append(wide_row(note(
                     "{{ lang._('The chosen driver is not among the drivers installed on this firewall, so LCDproc will refuse to start.') }}",
                     'text-warning'
-                ));
+                )));
             }
 
             draw_device_choices(devices);
@@ -715,59 +751,51 @@
             const $body = $('#suggestion-body').empty();
             const panel = (report !== null && is_object(report.panel)) ? report.panel : null;
             const matched = panel !== null && (report.matched === true || !!panel.driver);
-            $('#suggestion-panel').toggle(panel !== null && (matched || !!panel.hint));
+            $('.fp-suggestion').toggle(panel !== null && (matched || !!panel.hint));
             if (panel === null) {
                 return;
             }
 
             if (matched) {
-                $body.append($('<p/>').text(
-                    "{{ lang._('This appliance matches an entry in the table of known panels:') }}"
-                ));
-                $body.append($('<div class="fp-strong"/>').text(
-                    fp_data(String(panel.display || report.match || ''))));
-
-                const options = is_object(panel.options) ? panel.options : {};
-                const rows = [
-                    ["{{ lang._('Driver') }}", panel.driver],
-                    ["{{ lang._('Connection type') }}", options.ConnectionType],
-                    ["{{ lang._('Serial port') }}", options.Device],
-                    ["{{ lang._('Size') }}", options.Size]
-                ];
-                const $table = $('<table class="table table-condensed fp-detail"/>');
-                const $rows = $('<tbody/>');
-                rows.forEach(function (row) {
-                    if (row[1] === undefined || row[1] === null || row[1] === '') {
-                        return;
-                    }
-                    $rows.append($('<tr/>')
-                        .append($('<th/>').text(row[0]))
-                        .append($('<td/>').append($('<span class="fp-tech"/>').text(String(row[1])))));
-                });
-                $table.append($rows);
-                $body.append($table);
-
                 /* What the table itself admits to, printed as it was written. An entry says what
                    has been confirmed and by whom, and a proposal read without that line is a
-                   guess read as a fact. */
+                   guess read as a fact - so an unconfirmed one says so in plain sight, and the
+                   long account of a confirmed one waits under full help. */
+                const $entry = $('<div/>').append($('<span class="fp-strong"/>').text(
+                    fp_data(String(panel.display || report.match || ''))));
                 if (panel.confirmed) {
-                    $body.append(note(fp_data(String(panel.confirmed))));
+                    $entry.append(help_note(fp_data(String(panel.confirmed))));
                 } else {
-                    $body.append(note(
+                    $entry.append(note(
                         "{{ lang._('Nobody has confirmed this proposal on this model yet. It is where to start, not what to expect.') }}",
                         'text-warning'
                     ));
                 }
+                $body.append(row("{{ lang._('Matched entry') }}", $entry));
 
-                $body.append($('<button type="button" id="applySuggestionAct" class="btn btn-default fp-action"/>')
-                    .text("{{ lang._('Put these in the settings') }}"));
-                $body.append(note(
-                    "{{ lang._('This only fills the boxes on the settings tab. Nothing reaches the panel until they are saved.') }}"
-                ));
+                const options = is_object(panel.options) ? panel.options : {};
+                [
+                    ["{{ lang._('Driver') }}", panel.driver],
+                    ["{{ lang._('Connection type') }}", options.ConnectionType],
+                    ["{{ lang._('Serial port') }}", options.Device],
+                    ["{{ lang._('Size') }}", options.Size]
+                ].forEach(function (pair) {
+                    if (pair[1] === undefined || pair[1] === null || pair[1] === '') {
+                        return;
+                    }
+                    $body.append(row(pair[0], $('<span class="fp-tech"/>').text(String(pair[1]))));
+                });
+
+                $body.append(row('', $('<div/>')
+                    .append($('<button type="button" id="applySuggestionAct" class="btn btn-default btn-xs"/>')
+                        .text("{{ lang._('Put these in the settings') }}"))
+                    .append(help_note(
+                        "{{ lang._('This only fills the boxes on the settings tab. Nothing reaches the panel until they are saved.') }}"
+                    ))));
             }
 
             if (panel.hint) {
-                $body.append(note(fp_data(String(panel.hint))));
+                $body.append(wide_row(note(fp_data(String(panel.hint)))));
             }
         }
 
@@ -900,21 +928,22 @@
            exactly the confusion this button exists to avoid. */
         $('#saveAct').click(function () {
             const $button = $(this);
+            const $progress = $('#frm_general_progress');
             $button.prop('disabled', true);
+            $progress.addClass('fa fa-spinner fa-pulse');
             saveFormToEndpoint('/api/frontpanel/settings/set', 'frm_general', function () {
                 apply_settings(function () {
+                    $progress.removeClass('fa fa-spinner fa-pulse');
                     $button.prop('disabled', false);
-                    $('#saveAct_done').show().delay(2000).fadeOut();
                 });
             }, false, function () {
+                $progress.removeClass('fa fa-spinner fa-pulse');
                 $button.prop('disabled', false);
             });
         });
 
         function apply_settings(done) {
-            $('#OPNsenseStdWaitDialog').modal('show');
             ajaxCall('/api/frontpanel/service/reconfigure', {}, function (data) {
-                $('#OPNsenseStdWaitDialog').modal('hide');
                 updateServiceControlUI('frontpanel');
                 reload_service_state();
                 reload_preview();
@@ -1009,8 +1038,21 @@
         margin: 10px;
     }
 
-    .fp-panels {
-        padding: 0 10px 10px;
+    /* the heading of a section, as OPNsense's base_form draws one */
+    .fp-head {
+        padding-top: 5px;
+        padding-bottom: 5px;
+        font-size: 16px;
+    }
+
+    .fp-head small {
+        font-size: 12px;
+        font-weight: normal;
+    }
+
+    /* under "full help" until it is turned on */
+    .fp-help {
+        display: none;
     }
 
     .fp-note {
@@ -1032,29 +1074,10 @@
         font-weight: bold;
     }
 
-    .fp-action {
-        margin-top: 10px;
-    }
-
     .fp-label {
         display: block;
         margin-top: 10px;
         margin-bottom: 4px;
-    }
-
-    .fp-section {
-        padding: 10px 0;
-    }
-
-    .fp-section-head {
-        font-weight: bold;
-        padding-bottom: 6px;
-    }
-
-    .fp-detail > tbody > tr > th {
-        width: 45%;
-        font-weight: normal;
-        opacity: 0.8;
     }
 
     .fp-keys {
@@ -1073,10 +1096,6 @@
         padding-bottom: 2px;
     }
 
-    .fp-port-row {
-        padding-top: 4px;
-    }
-
     .fp-port-pick {
         margin-inline-end: 6px;
         margin-top: 4px;
@@ -1084,8 +1103,21 @@
 
     /* ---------------------------------------------------------------- the panel preview */
 
+    /* The screens side by side, as many as the width takes. A warning about all of them still
+       takes the whole row. */
+    #preview-body {
+        display: flex;
+        flex-wrap: wrap;
+        column-gap: 28px;
+    }
+
+    #preview-body > .alert {
+        flex: 0 0 100%;
+    }
+
     .fp-screen {
         padding: 10px 0;
+        max-width: 100%;
     }
 
     .fp-screen-head {
@@ -1194,71 +1226,110 @@
 
 <div class="tab-content content-box" id="frontpanel">
     <div id="settings" class="tab-pane fade in">
-        <div class="alert alert-info fp-alert" role="alert">
-            <i class="fa fa-fw fa-info-circle"></i>
-            {{ lang._('This plugin writes nothing to the serial port itself. It writes a configuration file for LCDproc, which is what speaks to the panel, and it starts and stops that. Saving here writes the file again and restarts the service, because LCDproc reads its settings only when it starts.') }}
-        </div>
         <div id="rotation-note"></div>
-        {{ partial("layout_partials/base_form", ['fields': generalForm, 'id': 'frm_general']) }}
-        <div class="col-md-12" style="padding: 10px 15px 20px;">
-            <button class="btn btn-primary" id="saveAct" type="button"><b>{{ lang._('Save and apply') }}</b></button>
-            <span id="saveAct_done" class="text-success" style="display: none; margin: 0 10px;">
-                <i class="fa fa-check"></i> {{ lang._('Applied') }}
-            </span>
-        </div>
+        {{ partial("layout_partials/base_form", ['fields': generalForm, 'id': 'frm_general', 'apply_btn_id': 'saveAct']) }}
     </div>
 
+    {# The two other tabs are laid out the way OPNsense lays out a form: sections with a heading,
+       a label on the left and the reading on the right, and the long explanations under the
+       same "full help" switch the settings tab has. #}
     <div id="preview" class="tab-pane fade in">
-        <div class="alert alert-info fp-alert" role="alert">
-            <i class="fa fa-fw fa-info-circle"></i>
-            <span id="preview-summary">{{ lang._('Asking the firewall what the panel would show...') }}</span>
-            <button id="previewRefreshAct" class="btn btn-xs btn-default" type="button">
-                <i class="fa fa-fw fa-refresh"></i> {{ lang._('Refresh') }}
-            </button>
-        </div>
-        <div class="fp-panels">
-            <div class="fp-note">
-                {{ lang._('Each screen as the panel would draw it this second, at the width of the display. Anything past the last column is shown struck through: that part never reaches the panel. Nothing here is sent to the display, so it can be read with the service stopped.') }}
-            </div>
-            <div id="preview-body"></div>
+        <div class="table-responsive">
+            <table class="table table-striped table-condensed fp-form">
+                <thead>
+                    <tr>
+                        <th>
+                            <div class="fp-head">
+                                <b>{{ lang._('Screens') }}</b>
+                                <small id="preview-summary" class="fp-sub">{{ lang._('Asking the firewall what the panel would show...') }}</small>
+                                <span class="pull-right">
+                                    <i class="fa fa-info-circle fa-sm fa-fw text-primary"></i> <small>{{ lang._('full help') }}</small>
+                                    <a href="#" class="fp-help-toggle"><i class="fa fa-toggle-off fa-fw text-danger"></i></a>
+                                    <button id="previewRefreshAct" class="btn btn-xs btn-default" type="button" title="{{ lang._('Refresh') }}">
+                                        <i class="fa fa-fw fa-refresh"></i>
+                                    </button>
+                                </span>
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="help-block fp-help">
+                                {{ lang._('Each screen as the panel would draw it this second, at the width of the display. Anything past the last column is shown struck through: that part never reaches the panel. Nothing here is sent to the display, so it can be read with the service stopped.') }}
+                            </div>
+                            <div id="preview-body"></div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
     <div id="diagnostics" class="tab-pane fade in">
-        <div class="alert alert-info fp-alert" role="alert">
-            <i class="fa fa-fw fa-info-circle"></i>
-            <span id="service-state"></span>
-            <button id="diagnosticsRefreshAct" class="btn btn-xs btn-default" type="button">
-                <i class="fa fa-fw fa-refresh"></i> {{ lang._('Refresh') }}
-            </button>
-        </div>
-        <div class="fp-panels">
-            <div class="fp-section">
-                <div class="fp-section-head">{{ lang._('Keys') }}</div>
-                <div id="keys-body"></div>
-            </div>
-            <div class="fp-section">
-                <div class="fp-section-head">{{ lang._('Serial ports on this machine') }}</div>
-                <div id="devices-body"></div>
-            </div>
-            <div class="fp-section" id="suggestion-panel" style="display: none;">
-                <div class="fp-section-head">{{ lang._('Known panel') }}</div>
-                <div id="suggestion-body"></div>
-            </div>
-            <div class="fp-section">
-                <div class="fp-section-head">{{ lang._('Test the panel') }}</div>
-                <div class="fp-note">
-                    {{ lang._('Put one line on the panel for a moment and then give it back to the rotation. It goes through LCDproc like every other screen, so it only works while the service is running.') }}
-                </div>
-                <div class="fp-action">
-                    <input type="text" id="test-text" class="form-control fp-tech" maxlength="64"
-                           style="max-width: 24em; display: inline-block;"
-                           placeholder="{{ lang._('a line to put on the panel') }}"/>
-                    <button id="testAct" class="btn btn-default" type="button">
-                        <i class="fa fa-fw fa-paper-plane"></i> {{ lang._('Send it') }}
-                    </button>
-                </div>
-            </div>
+        <div class="table-responsive">
+            <table class="table table-striped table-condensed fp-form">
+                <colgroup>
+                    <col style="width: 25%;"/>
+                    <col style="width: 75%;"/>
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th colspan="2">
+                            <div class="fp-head">
+                                <b>{{ lang._('Service') }}</b>
+                                <span class="pull-right">
+                                    <i class="fa fa-info-circle fa-sm fa-fw text-primary"></i> <small>{{ lang._('full help') }}</small>
+                                    <a href="#" class="fp-help-toggle"><i class="fa fa-toggle-off fa-fw text-danger"></i></a>
+                                    <button id="diagnosticsRefreshAct" class="btn btn-xs btn-default" type="button" title="{{ lang._('Refresh') }}">
+                                        <i class="fa fa-fw fa-refresh"></i>
+                                    </button>
+                                </span>
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ lang._('Status') }}</td>
+                        <td id="service-state"></td>
+                    </tr>
+                </tbody>
+                <thead>
+                    <tr><th colspan="2"><div class="fp-head"><b>{{ lang._('Keys') }}</b></div></th></tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="2" id="keys-body"></td></tr>
+                </tbody>
+                <thead>
+                    <tr><th colspan="2"><div class="fp-head"><b>{{ lang._('Serial ports on this machine') }}</b></div></th></tr>
+                </thead>
+                <tbody id="devices-body"></tbody>
+                <thead class="fp-suggestion" style="display: none;">
+                    <tr><th colspan="2"><div class="fp-head"><b>{{ lang._('Known panel') }}</b></div></th></tr>
+                </thead>
+                <tbody id="suggestion-body" class="fp-suggestion" style="display: none;"></tbody>
+                <thead>
+                    <tr><th colspan="2"><div class="fp-head"><b>{{ lang._('Test the panel') }}</b></div></th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ lang._('A line for the panel') }}</td>
+                        <td>
+                            <input type="text" id="test-text" class="form-control fp-tech" maxlength="64"
+                                   style="max-width: 24em; display: inline-block;"
+                                   placeholder="{{ lang._('a line to put on the panel') }}"/>
+                            <button id="testAct" class="btn btn-default" type="button">
+                                <i class="fa fa-fw fa-paper-plane"></i> {{ lang._('Send it') }}
+                            </button>
+                            <div class="help-block fp-help">
+                                {{ lang._('Put one line on the panel for a moment and then give it back to the rotation. It goes through LCDproc like every other screen, so it only works while the service is running.') }}
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

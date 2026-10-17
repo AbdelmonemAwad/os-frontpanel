@@ -106,6 +106,18 @@ That is deliberate. Writing an unknown protocol at an unknown speed to a serial 
 somebody's console is not a mistake a plugin gets to make on its own initiative, on a machine that is
 at that moment routing somebody's traffic.
 
+## The page
+
+System: Front Panel has three tabs, laid out the way OPNsense lays out its own forms:
+
+- **Settings** - the form, with the form's own **Apply**, which writes LCDd's configuration and
+  restarts the service.
+- **Preview** - every screen as the panel would draw it this second, side by side.
+- **Diagnostics** - the service, the keys, the serial ports and which of them carries a login
+  prompt, the known-panel entry this appliance matched, and a line to send to the panel.
+
+The long explanations on each tab are under its **full help** switch, as on every OPNsense form.
+
 ## Settings, and the speeds
 
 Every speed on this page is adjustable from the GUI, and that is not decoration: it is the one thing

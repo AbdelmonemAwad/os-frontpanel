@@ -7,7 +7,7 @@
         <id>frontpanel.general.enabled</id>
         <label>Enabled</label>
         <type>checkbox</type>
-        <help>Nothing runs until this is on. Turning it off stops the service; whatever was on the panel at that moment stays there, because a screen that is no longer being written to keeps its last frame.</help>
+        <help>Nothing runs until this is on. Turning it off stops the service; whatever was on the panel at that moment stays there, because a screen that is no longer being written to keeps its last frame. The plugin writes nothing to the serial port itself: it writes a configuration file for LCDproc, which is what speaks to the panel, and starts and stops it. Apply writes the file again and restarts the service, because LCDproc reads its settings only when it starts.</help>
     </field>
     <field>
         <id>frontpanel.general.driver</id>
