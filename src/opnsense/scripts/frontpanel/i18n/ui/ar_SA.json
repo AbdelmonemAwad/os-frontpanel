@@ -147,5 +147,10 @@
   "The keys are polled rather than volunteered, so silence here means the panel answered the poll with nothing - press one and look again. If nothing ever arrives, this panel may simply be unable to report a key, which is a limit of the hardware and not a fault.": "المفاتيح تُستطلَع ولا تُبلّغ عن نفسها، فالصمت هنا يعني أن اللوحة أجابت الاستطلاع بلا شيء - اضغط أحدها ثم انظر مرة أخرى. وإن لم يصل شيء أبدًا، فقد تكون هذه اللوحة ببساطة عاجزة عن الإبلاغ عن مفتاح، وهذا حدّ من حدود العتاد وليس عطلًا.",
   "full help": "مساعدة كاملة",
   "hd44780 (Sophos XG / XGS)": "hd44780 (Sophos XG / XGS)",
-  "no login prompt configured": "لا يوجد عليه موجّه تسجيل دخول"
+  "no login prompt configured": "لا يوجد عليه موجّه تسجيل دخول",
+  "Panel": "اللوحة",
+  "in the rotation, with something to show": "في الدورة، ولديها ما تعرضه",
+  "not read": "لا تُقرأ",
+  "read": "تُقرأ",
+  "the buttons beside the screen": "الأزرار بجانب الشاشة"
 }

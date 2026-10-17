@@ -147,5 +147,10 @@
  "The keys are polled rather than volunteered, so silence here means the panel answered the poll with nothing - press one and look again. If nothing ever arrives, this panel may simply be unable to report a key, which is a limit of the hardware and not a fault.",
  "full help",
  "hd44780 (Sophos XG / XGS)",
- "no login prompt configured"
+ "no login prompt configured",
+ "Panel",
+ "in the rotation, with something to show",
+ "not read",
+ "read",
+ "the buttons beside the screen"
 ]
