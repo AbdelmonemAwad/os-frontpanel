@@ -358,11 +358,19 @@ on. A reboot alone may not do it, because the panel keeps its contents while it 
 Nothing you can send down a serial line damages one of these; the worst case really is a confused
 display and a walk to the rack.
 
-**About the keys.** On this family of panels the keys are *polled*: the host sends a poll byte and
+**About the keys.** On the XG 330's panel the keys are *polled*: the host sends a poll byte and
 the panel answers (documented in LCDproc's `hd44780-serial.c`). Listening to the port passively shows
 nothing whether the keys work or not, so "I saw no key events" is not evidence that a panel has no
-working keypad. On the reference machine all four keys report (measured here, 2026-09-21), and it
-took two corrections to the obvious procedure to see the first one:
+working keypad. ~~On this family of panels the keys are polled~~ - not all of them: the XGS 3300's
+bridge answers no poll and sends one letter per press by itself (measured 2026-10-17; the README's
+[The buttons and the menu](../README.md#the-buttons-and-the-menu)). For a panel like that, give its
+entry a `keybytes` map - the letter each key sends, and the key's name - and a `keylabels` map with
+what is printed on each key; **Learn the codes from the panel** on the Buttons tab finds the letters.
+A bridge that also ignores positioning commands - the XGS 3300's writes every character round a ring
+of cells whatever it is sent - needs `"direct": true` as well: LCDd is then not started, the plugin
+writes only whole screens, and the owner lines the text up once with **Align the text**.
+On the XG 330 all four keys report (measured here, 2026-09-21), and it took two corrections to the
+obvious procedure to see the first one:
 
 - **`ReportLevel=3` is not enough, and `5` is more than you want.** The runs at level 3 logged
   nothing while keys were being pressed; the first runs that recorded a press were at

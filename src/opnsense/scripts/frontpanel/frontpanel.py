@@ -37,9 +37,14 @@
         frontpanel.py screens          what each screen would show right now
         frontpanel.py keys             what the driver has reported since it started
         frontpanel.py learn [seconds]  stop the feeder, listen, say which key spoke
+        frontpanel.py learn-keys [k,k] ask for each key on the glass, say which byte it sent
+        frontpanel.py buttons          the button rows this appliance starts from
+        frontpanel.py presses          the presses the screen client has recorded
+        frontpanel.py align <what>     line up the text on a ring panel: show, hide, or 0-39
         frontpanel.py panels           the appliance table, joined to this machine
         frontpanel.py diagnostics      the keys and the panels report in one answer
         frontpanel.py client           the screen client itself (started by `start`)
+        frontpanel.py mode             who draws the panel: lcdd, or direct - the plugin itself
 
     ---------------------------------------------------------------------------
 
@@ -101,8 +106,10 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import bridge    # noqa: E402
 import config    # noqa: E402
 import keys as keypad  # noqa: E402
+import menu as panelmenu  # noqa: E402
 import screens   # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -162,6 +169,11 @@ IDLE_POLL = 0.5
 # installing os-linkhealth makes the ports screen appear without a restart.
 AVAILABILITY_SECONDS = 60
 
+# How often the client looks at whether the settings were saved. One stat of
+# config.xml, so it can be often: a button given a new action on the page is
+# then doing it on the panel within a few seconds, with nothing restarted.
+RELOAD_SECONDS = 5
+
 # A key press pins the panel to one screen. This is how long that lasts if
 # nobody presses anything else: a rack panel that somebody brushed past must
 # not still be frozen on one screen an hour later.
@@ -171,6 +183,19 @@ PINNED_SECONDS = 120
 # are the ones panels.json ships for the appliance whose keypad was measured,
 # and the ones keys.py gives an action to when nobody has said otherwise.
 DEFAULT_KEYS = ['Enter', 'Up', 'Down', 'Escape']
+
+# The order the learning asks for the keys in when the grid names none: the
+# four every panel of this family has, in the order the XGS 3300 has them.
+LEARN_ORDER = ['Enter', 'Escape', 'Up', 'Down']
+
+# How long the learning waits for each key before moving on without it.
+LEARN_SECONDS = 15
+
+# In the menu a key moves, opens or goes back; which of those it does follows
+# from what it does outside the menu, and from its name where that says nothing.
+ROLE_BY_ACTION = {'previous': 'up', 'next': 'down', 'menu': 'select', 'back': 'back'}
+ROLE_BY_NAME = {'Up': 'up', 'Down': 'down', 'Enter': 'select', 'Right': 'select',
+                'Escape': 'back', 'Left': 'back'}
 
 # A key name as LCDd.conf may spell one. Narrow on purpose: these go into a
 # command line sent to the server, where a space would start another argument.
@@ -434,6 +459,15 @@ def log_tail(path, lines=12, only_errors=False):
 # The screen client
 # ---------------------------------------------------------------------------
 
+def appliance_entry():
+    """This machine's entry in the appliance table, or {} when it cannot be read."""
+    try:
+        _, panel = config.match_panel()
+    except Exception:
+        panel = {}
+    return panel or {}
+
+
 def wanted_keys(options):
     """The key names to ask LCDd for, for this installation's own keypad.
 
@@ -480,7 +514,10 @@ class Client(object):
 
     def __init__(self, options):
         self.options = options
-        self.panel = Panel()
+        # On a panel LCDd draws wrongly the client draws it itself, through an
+        # object that answers the same commands - see bridge.Direct.
+        self.direct = config.draws_direct(options, appliance_entry())
+        self.panel = bridge.Direct(options, appliance_entry()) if self.direct else Panel()
         self.width, self.height = config.geometry(options['size']) or (16, 2)
         self.actions = keypad.actions_for(options)
         self.added = []        # screen keys currently known to LCDd
@@ -488,10 +525,16 @@ class Client(object):
         self.visible = ''      # what LCDd last said it was showing
         self.pinned = ''       # a screen a key press stuck us on, or ''
         self.pinned_at = 0.0
-        self.menu = None       # index into menu_order(), or None when closed
+        self.held = False      # the rotation paused by a key, until a key resumes it
+        self.menu = None       # a menu.Menu while the menu is open, else None
         self.menu_at = 0.0
+        self.port = None       # the panel's port, where the plugin reads the keys itself
+        self.codes = {}        # {byte: key name} for such a panel
+        self.aligning = False  # moving a ring panel's picture with the keys
+        self.aligning_at = 0.0
         self.content_at = 0.0
         self.availability_at = 0.0
+        self.reload_at = 0.0
         try:
             self.config_at = os.path.getmtime(config.CONFIG_XML)
         except OSError:
@@ -516,8 +559,55 @@ class Client(object):
         self.shown = {}
         self.visible = ''
         self.pinned = ''
+        self.held = False
         self.menu = None
+        self.open_port()
         self.refresh_screens()
+
+    def open_port(self):
+        """Read the keys from the port, on a panel whose bridge sends them unasked.
+
+        Opened after LCDd has the port and has set the line up, read only, and
+        left as LCDd set it. A port that will not open costs the keys and
+        nothing else: the screens keep rotating, and the log says why.
+        """
+        self.close_port()
+        if self.direct:
+            return   # the panel object reads the keys itself
+        panel = appliance_entry()
+        self.codes = config.key_codes(self.options, panel) if self.options['keypad'] else {}
+        if not self.codes or not self.options.get('device'):
+            return
+        try:
+            self.port = bridge.Port(self.options['device'])
+        except OSError as failure:
+            print('cannot read the keys from %s: %s' % (self.options['device'], failure),
+                  file=sys.stderr)
+            self.port = None
+
+    def close_port(self):
+        if self.port is not None:
+            self.port.close()
+            self.port = None
+
+    def read_port(self):
+        """Every key the port has delivered since the last look, by name."""
+        if self.port is None:
+            return []
+        try:
+            arrived = self.port.read()
+        except OSError as failure:
+            print('lost the keys on %s: %s' % (self.options.get('device'), failure), file=sys.stderr)
+            self.close_port()
+            return []
+        names = []
+        for byte in arrived:
+            name = self.codes.get(byte)
+            if name:
+                names.append(name)
+            else:
+                print('a byte no key is known to send: %02X' % byte, file=sys.stderr)
+        return names
 
     def add_screen(self, key, lines):
         self.panel.send('screen_add %s' % key)
@@ -640,6 +730,7 @@ class Client(object):
 
     def unpin(self):
         self.pinned = ''
+        self.held = False
         for name in self.added:
             self.panel.send('screen_set %s -priority foreground' % name)
 
@@ -665,9 +756,17 @@ class Client(object):
         # Anything LCDd itself had to be told - the driver, the port, the
         # speeds - is not adopted here: that is a new LCDd.conf and a restart,
         # and `start` does it by comparing the file it wrote.
-        for name in ('screens', 'message', 'throughput_if', 'keys', 'keypad'):
+        for name in ('screens', 'message', 'throughput_if', 'keys', 'keypad', 'power'):
             self.options[name] = fresh[name]
         self.actions = keypad.actions_for(self.options)
+        if self.port is not None:
+            # A code learned on the page since the port was opened.
+            self.codes = config.key_codes(self.options, appliance_entry()) or self.codes
+        if self.direct:
+            # Drawn here, so these take effect without a restart.
+            self.panel.codes = (config.key_codes(self.options, appliance_entry())
+                                if self.options['keypad'] else {})
+            self.panel.wait = max(1, int(fresh.get('screen_seconds') or 3))
 
     def order(self):
         """The screens in the order the settings asked for them.
@@ -695,48 +794,33 @@ class Client(object):
     # -- the menu ---------------------------------------------------------
 
     def open_menu(self):
-        """A list of the screens, on the glass, with the feeder silent.
+        """The panel's menu, on the glass, with the feeder silent.
 
-        `input` is the priority above everything else LCDd knows about, so the
-        menu cannot be rotated out from under a finger. Nothing else is written
-        while it is open: the whole reason the menu is usable on this appliance
-        is that a quiet bus is a bus that does not swallow key presses.
+        Laid out as the vendor's own firmware lays out its menu on this hardware
+        - see menu.py. `input` is the priority above everything else LCDd knows
+        about, so the menu cannot be rotated out from under a finger. Nothing
+        else is written while it is open: on a panel whose keys are polled, a
+        quiet bus is a bus that does not swallow key presses.
         """
-        order = self.order()
-        if not order:
-            return
-
-        current = self.pinned or self.visible
-        self.menu = order.index(current) if current in order else 0
-        self.menu_at = time.monotonic()
+        root = panelmenu.tree(self.options, self.width, self.order(), ring=self.direct)
+        self.menu = panelmenu.Menu(root, self.width)
 
         if MENU_SCREEN not in self.added:
             self.panel.send('screen_add %s' % MENU_SCREEN)
             self.panel.send('widget_add %s l1 string' % MENU_SCREEN)
             self.panel.send('widget_add %s l2 string' % MENU_SCREEN)
             self.added.append(MENU_SCREEN)
-        self.panel.send('screen_set %s -name %s -priority input -timeout %d'
-                        % (MENU_SCREEN, quoted('menu'), (MENU_SECONDS + 5) * 8))
         self.draw_menu()
 
     def draw_menu(self):
-        order = self.order()
-        if self.menu is None or not order:
-            return
-        self.menu = self.menu % len(order)
-        key = order[self.menu]
-        title = screens.BY_KEY.get(key, (key,))[0]
-        self.write(MENU_SCREEN, [
-            screens.cut('Screens %d/%d' % (self.menu + 1, len(order)), self.width),
-            screens.cut('> ' + title, self.width),
-        ])
-
-    def move_menu(self, direction):
         if self.menu is None:
             return
-        self.menu += direction
         self.menu_at = time.monotonic()
-        self.draw_menu()
+        # The timeout is LCDd's, in eighths of a second, and it is set again at
+        # every press so that a menu somebody is still using is never taken away.
+        self.panel.send('screen_set %s -name %s -priority input -timeout %d'
+                        % (MENU_SCREEN, quoted('menu'), (MENU_SECONDS + 5) * 8))
+        self.write(MENU_SCREEN, self.menu.lines())
 
     def close_menu(self):
         if self.menu is None:
@@ -745,13 +829,64 @@ class Client(object):
         if MENU_SCREEN in self.added:
             self.remove_screen(MENU_SCREEN)
 
-    def confirm_menu(self):
-        order = self.order()
-        if self.menu is None or not order:
+    def role(self, name, action):
+        return ROLE_BY_ACTION.get(action) or ROLE_BY_NAME.get(name)
+
+    def menu_press(self, role):
+        result = self.menu.press(role)
+        if result is None:
+            self.draw_menu()
             return
-        key = order[self.menu % len(order)]
+
+        kind = result[0]
+        if kind == 'close':
+            self.close_menu()
+        elif kind == 'align':
+            self.close_menu()
+            self.start_aligning()
+        elif kind == 'pin':
+            self.close_menu()
+            self.pin(result[1])
+        elif kind in ('reboot', 'halt'):
+            if not self.options.get('power', True):
+                self.close_menu()
+                return
+            self.menu_at = time.monotonic()
+            self.write(MENU_SCREEN, [screens.cut('Rebooting...' if kind == 'reboot'
+                                                 else 'Shutting down...', self.width), ''])
+            panelmenu.power(kind)
+
+    # -- aligning a ring panel ---------------------------------------------
+
+    def start_aligning(self):
+        """The ruler on the glass, and the arrows moving it, until Enter or Escape.
+
+        For a panel drawn as a ring (bridge.Direct). The same mode follows when
+        the page puts the ruler up: while it is there the keys belong to it, so
+        a press moves the text instead of the screens.
+        """
+        if not self.direct:
+            return
         self.close_menu()
-        self.pin(key)
+        if not self.panel.ruler_on:
+            self.panel.show_ruler(MENU_SECONDS * 4)
+        self.aligning = True
+        self.aligning_at = time.monotonic()
+
+    def stop_aligning(self):
+        self.aligning = False
+        self.panel.hide_ruler()
+        log('front panel text aligned, offset %d' % self.panel.offset)
+
+    def align_key(self, name, action):
+        self.aligning_at = time.monotonic()
+        role = self.role(name, action)
+        if role == 'up':
+            self.panel.shift(-1)
+        elif role == 'down':
+            self.panel.shift(1)
+        elif role in ('select', 'back'):
+            self.stop_aligning()
 
     # -- what a button does -----------------------------------------------
 
@@ -764,6 +899,16 @@ class Client(object):
             self.open_menu()
         elif action == 'back':
             self.unpin()
+        elif action == 'pause':
+            if self.held:
+                self.unpin()
+            else:
+                current = self.pinned or self.visible
+                if current not in self.added or current in INTERNAL_SCREENS:
+                    order = self.order()
+                    current = order[0] if order else ''
+                self.pin(current)
+                self.held = bool(self.pinned)
         elif action == 'screen':
             self.pin(target)
         elif action == 'backlight':
@@ -786,19 +931,21 @@ class Client(object):
 
         action, target = self.actions.get(name, ('none', ''))
 
+        if self.direct and (self.aligning or self.panel.ruler_on):
+            if not self.aligning:
+                self.start_aligning()   # the page put the ruler up
+            self.align_key(name, action)
+            return
+
         if self.menu is not None:
-            if action == 'next':
-                self.move_menu(1)
-            elif action == 'previous':
-                self.move_menu(-1)
-            elif action == 'menu':
-                self.confirm_menu()
+            role = self.role(name, action)
+            if role:
+                self.menu_press(role)
             else:
-                # Anything else leaves the menu first, so a key with an unusual
-                # action cannot act from underneath it.
+                # A key with no part to play in the menu leaves it first, so it
+                # cannot act from underneath it.
                 self.close_menu()
-                if action != 'back':
-                    self.act(action, target)
+                self.act(action, target)
             return
 
         self.act(action, target)
@@ -820,9 +967,13 @@ class Client(object):
     def serve(self):
         """One connection, for as long as it lasts."""
         self.connect()
-        print('connected to LCDd %s, protocol %s, %dx%d'
-              % (self.panel.version or '?', self.panel.protocol or '?',
-                 self.width, self.height), file=sys.stderr)
+        if self.direct:
+            print('drawing the panel on %s directly, %dx%d'
+                  % (self.options['device'], self.width, self.height), file=sys.stderr)
+        else:
+            print('connected to LCDd %s, protocol %s, %dx%d'
+                  % (self.panel.version or '?', self.panel.protocol or '?',
+                     self.width, self.height), file=sys.stderr)
 
         while not _stopping:
             # Faster while a key is expected, slower while idle. This is the
@@ -830,10 +981,27 @@ class Client(object):
             # the wire, but it is the half we own, and answering a press in a
             # tenth of a second instead of half of one is what makes stepping
             # through a menu feel like a menu.
-            for line in self.panel.drain(MENU_POLL if self.menu is not None else IDLE_POLL):
+            wait = MENU_POLL if self.menu is not None else IDLE_POLL
+            if self.port is not None:
+                # Wake for whichever speaks first, LCDd or a key.
+                select.select([self.panel.sock, self.port], [], [], wait)
+                wait = 0.0
+            for line in self.panel.drain(wait):
                 self.handle(line)
+            for name in self.read_port():
+                self.key(name)
 
             now = time.monotonic()
+
+            if self.direct and self.panel.ruler_on and self.menu is not None:
+                # The page put the ruler up over an open menu.
+                self.close_menu()
+            if self.aligning and (not self.panel.ruler_on
+                                  or now - self.aligning_at >= MENU_SECONDS * 4):
+                # The ruler went (a pick on the page, or its own timeout) or
+                # nobody pressed anything for a while: the offset is already kept.
+                self.aligning = False
+                self.panel.hide_ruler()
 
             if self.menu is not None:
                 # Nothing is written while the menu is up. A quiet bus is the
@@ -844,10 +1012,12 @@ class Client(object):
 
             if now - self.content_at >= CONTENT_SECONDS:
                 self.refresh_visible()
-            if now - self.availability_at >= AVAILABILITY_SECONDS:
+            if now - self.reload_at >= RELOAD_SECONDS:
+                self.reload_at = now
                 self.reload()
+            if now - self.availability_at >= AVAILABILITY_SECONDS:
                 self.refresh_screens()
-            if self.pinned and now - self.pinned_at >= PINNED_SECONDS:
+            if self.pinned and not self.held and now - self.pinned_at >= PINNED_SECONDS:
                 self.unpin()
 
     def run(self):
@@ -866,6 +1036,7 @@ class Client(object):
                 print('lost LCDd: %s' % failure, file=sys.stderr)
             finally:
                 self.panel.close()
+                self.close_port()
 
             for _ in range(50):
                 if _stopping:
@@ -934,6 +1105,19 @@ def start():
         return built
 
     ensure_dirs()
+
+    if config.draws_direct(options, appliance_entry()):
+        # The plugin draws this panel itself; LCDd must not hold the port.
+        if running(LCDD_PID):
+            terminate(LCDD_SUPERVISOR, LCDD_PID, 'LCDd')
+        if not running(CLIENT_PID):
+            failure = start_client()
+            if failure:
+                return {'status': 'error', 'message': failure}
+        log('started on %s, drawn by the plugin itself' % built['device'])
+        answer = status()
+        answer['config'] = built
+        return answer
 
     # A speed that changed is a speed LCDd already read and is not using. It
     # only reads the file once, at startup, so honouring the new setting means
@@ -1045,13 +1229,21 @@ def status():
         },
         'panel': probe(),
         'keys': keypad.report(options),
+        'direct': config.draws_direct(options, appliance_entry()),
     }
+    if answer['direct']:
+        width, height = config.geometry(options['size']) or (16, 2)
+        answer['panel'] = {'answering': answer['client']['running'], 'version': 'direct',
+                           'protocol': '', 'width': width, 'height': height}
 
     complaints = log_tail(LCDD_LOG, 6, only_errors=True)
     if complaints:
         answer['lcdd']['complaints'] = complaints
 
-    answer['running'] = answer['lcdd']['running'] and answer['client']['running']
+    if answer['direct']:
+        answer['running'] = answer['client']['running']
+    else:
+        answer['running'] = answer['lcdd']['running'] and answer['client']['running']
     return answer
 
 
@@ -1070,6 +1262,21 @@ def test(text='', seconds=5):
     killed in the middle of the test the panel returns to normal by itself.
     """
     seconds = max(1, min(30, int(seconds)))
+
+    options = config.settings()
+    if config.draws_direct(options, appliance_entry()):
+        # No LCDd to hand the line to: the screen client draws this panel and
+        # picks the line up from a file of its own.
+        if not running(CLIENT_PID):
+            return {'status': 'error',
+                    'message': 'The panel is not running, so there is nothing to write to. '
+                               'Start it first.'}
+        width = (config.geometry(options['size']) or (16, 2))[0]
+        lines = [screens.cut(text if text else 'Front Panel', width),
+                 screens.cut('test %s' % time.strftime('%H:%M:%S'), width)]
+        config.write_atomic(bridge.TEST_FILE, json.dumps({'lines': lines, 'seconds': seconds}))
+        return {'status': 'ok', 'lines': lines, 'seconds': seconds, 'width': width,
+                'height': (config.geometry(options['size']) or (16, 2))[1]}
 
     panel = Panel()
     try:
@@ -1150,6 +1357,12 @@ def learn(seconds=20):
     seconds = max(3, min(120, int(seconds)))
     options = config.settings()
 
+    if config.draws_direct(options, appliance_entry()):
+        return {'status': 'error',
+                'message': 'This panel is drawn by the plugin itself and LCDd is not running, '
+                           'so its log has no keys in it. Use Learn the codes from the panel '
+                           'on the Buttons tab.'}
+
     if not options['keypad']:
         return {'status': 'error',
                 'message': 'The keypad is switched off in the settings, so nothing is '
@@ -1229,6 +1442,202 @@ def learn(seconds=20):
     }
 
 
+def default_buttons():
+    """The rows the button grid starts from on this appliance.
+
+    One row per key the appliance table knows of, in the order the panel has
+    them, each with the label printed on it, the byte it sends where that was
+    measured, and the action the plugin gives that key when the grid says
+    nothing. The page adds the ones the grid does not have yet; nothing here
+    writes a setting.
+    """
+    try:
+        _, panel = config.match_panel()
+    except Exception:
+        panel = {}
+
+    codes = dict((name, '%02X' % code)
+                 for code, name in config.key_codes({'keys': []}, panel).items())
+    labels = panel.get('keylabels') or {}
+
+    names = []
+    for name in sorted(codes, key=lambda key: codes[key]):
+        names.append(name)
+    for name in (panel.get('keymap') or {}).values():
+        if name not in names:
+            names.append(name)
+    for name in LEARN_ORDER:
+        if name not in names:
+            names.append(name)
+
+    rows = []
+    for name in names:
+        rows.append({
+            'key': name,
+            'label': labels.get(name, ''),
+            'code': codes.get(name, ''),
+            'action': keypad.DEFAULT_ACTIONS.get(name, 'none'),
+            'target': '',
+        })
+    return {'status': 'ok', 'buttons': rows, 'direct': bool(codes),
+            'ring': config.draws_direct(config.settings(), panel)}
+
+
+def learn_keys(names='', seconds=LEARN_SECONDS):
+    """Ask for each key in turn on the glass, and say which byte it sent.
+
+    The procedure that found this panel's keys by hand, without the hand: the
+    service is stopped so the port is ours alone, the line is set up as LCDd
+    sets it, and for every key the panel says "Press <key>" and waits. A byte
+    that arrives is that key's code; a key already learned pressed again is
+    ignored, so a double press cannot give two keys one code. When it is done
+    the service is started again as it was.
+
+    Nothing is saved here. The page writes the codes into the button grid,
+    which is where a learned code outranks the appliance table.
+
+    A panel whose keys are polled - the XG 330's - sends nothing unasked, and
+    this hears nothing from it. That is an answer too: its keys are LCDd's to
+    read, through the matrix map in the appliance table.
+    """
+    seconds = max(5, min(60, int(seconds)))
+    options = config.settings()
+    try:
+        _, panel = config.match_panel()
+    except Exception:
+        panel = {}
+
+    device = options['device']
+    if not device or not os.path.exists(device):
+        return {'status': 'error',
+                'message': 'No serial port to listen on. Choose the panel\'s port in the '
+                           'settings and apply them first.'}
+
+    wanted = []
+    for name in re.split(r'[,\s]+', names or ''):
+        if _KEY_NAME.match(name) and name not in wanted:
+            wanted.append(name)
+    if not wanted:
+        wanted = [row['key'] for row in options['keys']] or list(LEARN_ORDER)
+    labels = dict(panel.get('keylabels') or {})
+    labels.update((row['key'], row['label']) for row in options['keys'] if row['label'])
+
+    was_running = bool(running(LCDD_PID) or running(CLIENT_PID))
+    stop()
+
+    width = (config.geometry(options['size']) or (16, 2))[0]
+    learned = {}
+    missing = []
+    prompted = False
+    port = None
+    try:
+        port = bridge.Port(device, config.serial_speed(options, panel), options['connection'])
+        ring = config.draws_direct(options, panel)
+        height = (config.geometry(options['size']) or (16, 2))[1]
+
+        def prompt(lines):
+            if ring:
+                port.ring(lines, width, height, bridge.load_offset())
+                return True
+            return port.show(lines, width)
+
+        for index, name in enumerate(wanted):
+            prompted = prompt([screens.cut('Press %s' % (labels.get(name) or name), width),
+                               screens.cut('key %d of %d, %ds' % (index + 1, len(wanted), seconds),
+                                           width)])
+            deadline = time.monotonic() + seconds
+            code = None
+            while code is None:
+                left = deadline - time.monotonic()
+                if left <= 0:
+                    break
+                byte = port.wait(left)
+                if byte is None:
+                    break
+                if byte not in learned.values():
+                    code = byte
+            if code is None:
+                missing.append(name)
+            else:
+                learned[name] = code
+        prompt([screens.cut('Learned %d of %d' % (len(learned), len(wanted)), width), ''])
+        time.sleep(1.5)
+    except OSError as failure:
+        return {'status': 'error', 'message': 'Could not use %s: %s' % (device, failure)}
+    finally:
+        if port is not None:
+            port.close()
+        if was_running and options['enabled']:
+            start()
+
+    answer = {
+        'status': 'ok',
+        'keys': wanted,
+        'learned': dict((name, '%02X' % code) for name, code in learned.items()),
+        'missing': missing,
+        'prompted': prompted,
+        'restarted': was_running and options['enabled'],
+    }
+    if not learned:
+        answer['note'] = ('Nothing arrived. This panel does not send its keys unasked; if they '
+                          'work at all, LCDd reads them by polling, through the appliance '
+                          'table\'s key map.')
+    return answer
+
+
+def align(what=''):
+    """Line up the text on a panel drawn as a ring.
+
+        align show     the ruler on the glass, for three minutes
+        align <0-39>   which ruler character is in the top left corner; that
+                       is where the cursor is, and it is kept
+        align hide     the ruler away again
+
+    The ruler is forty different characters drawn with the offset kept now,
+    so the one in the corner says by how far that offset is out.
+    """
+    options = config.settings()
+    if not config.draws_direct(options, appliance_entry()):
+        return {'status': 'error',
+                'message': 'This panel is drawn by LCDd, which places its own text; there is '
+                           'nothing to align.'}
+    if not running(CLIENT_PID):
+        return {'status': 'error',
+                'message': 'The panel is not running. Start it first.'}
+
+    what = (what or '').strip()
+    ring = len(bridge.RULER)
+    if what == 'show':
+        config.write_atomic(bridge.ALIGN_FILE, json.dumps({'show': True, 'seconds': 180}))
+        return {'status': 'ok', 'ruler': bridge.RULER, 'offset': bridge.load_offset()}
+    if what == 'hide':
+        config.write_atomic(bridge.ALIGN_FILE, json.dumps({'show': False}))
+        return {'status': 'ok'}
+    if what.isdigit() and int(what) < ring:
+        offset = (bridge.load_offset() - int(what)) % ring
+        bridge.save_offset(offset)
+        config.write_atomic(bridge.ALIGN_FILE, json.dumps({'show': False}))
+        log('front panel text aligned from the page, offset %d' % offset)
+        return {'status': 'ok', 'offset': offset}
+    return {'status': 'error', 'message': 'align takes show, hide, or a number from 0 to %d' % (ring - 1)}
+
+
+def presses():
+    """The presses the screen client has recorded, newest last - for the page's drawing.
+
+    Read from the client's own record and nothing else, so it costs one small
+    file and can be asked for every second or two while somebody stands at the
+    panel with the Buttons tab open.
+    """
+    stored = keypad.load_record()
+    return {
+        'status': 'ok',
+        'counts': stored.get('counts') or {},
+        'presses': (stored.get('presses') or [])[-10:],
+        'now': int(time.time()),
+    }
+
+
 def screens_now():
     """What every screen would show at this moment, for the GUI preview."""
     options = config.settings()
@@ -1299,6 +1708,11 @@ def diagnostics():
 def main(argv):
     command = argv[1] if len(argv) > 1 else 'status'
 
+    if command == 'mode':
+        # One word for the rc script: who draws the panel.
+        print('direct' if config.draws_direct(config.settings(), appliance_entry()) else 'lcdd')
+        return 0
+
     if command == 'client':
         signal.signal(signal.SIGTERM, _on_term)
         signal.signal(signal.SIGINT, _on_term)
@@ -1315,6 +1729,10 @@ def main(argv):
         'screens': screens_now,
         'keys': lambda: keypad.report(),
         'learn': lambda: learn(argv[2] if len(argv) > 2 and argv[2] else 20),
+        'learn-keys': lambda: learn_keys(argv[2] if len(argv) > 2 else ''),
+        'buttons': default_buttons,
+        'presses': presses,
+        'align': lambda: align(argv[2] if len(argv) > 2 else ''),
         'panels': panels,
         'diagnostics': diagnostics,
         # The text is whatever the settings page put in the box, and an empty

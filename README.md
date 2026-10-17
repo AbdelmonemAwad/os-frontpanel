@@ -108,10 +108,14 @@ at that moment routing somebody's traffic.
 
 ## The page
 
-System: Front Panel has three tabs, laid out the way OPNsense lays out its own forms:
+System: Front Panel has four tabs, laid out the way OPNsense lays out its own forms:
 
 - **Settings** - the form, with the form's own **Apply**, which writes LCDd's configuration and
   restarts the service.
+- **Buttons** - one row per key: what is printed on it, the byte it sends where the panel sends one,
+  and what a press does. **Add this appliance's keys** fills the grid from the appliance table, and
+  **Learn the codes from the panel** asks for each key on the glass and keeps what it hears - see
+  [The buttons and the menu](#the-buttons-and-the-menu).
 - **Preview** - every screen as the panel would draw it this second, side by side.
 - **Diagnostics** - the service, the keys, the serial ports and which of them carries a login
   prompt, the known-panel entry this appliance matched, and a line to send to the panel.
@@ -132,14 +136,15 @@ firewall.
 | `driver` | from the table | `Driver` | which of the 36 LCDproc drivers to load |
 | `device` | `/dev/cuau1` | the driver's `Device` | the serial port, offered from the ports the machine actually has |
 | `size` | `16x2` | the driver's `Size` | columns × rows |
-| `keypad` | on | the driver's `Keypad` | whether the keys are polled at all |
+| `keypad` | on | the driver's `Keypad` | whether the keys are read at all - by LCDd, or by the plugin on a panel that sends its keys unasked |
+| `panel_power` | on | — | whether the panel's menu offers Reboot and Shutdown, each behind a two-step confirmation |
 | **`screen_seconds`** | 3 | `WaitTime` | how long each screen is shown before the next one |
 | **`scroll_speed`** | 10 | `TitleSpeed` | how fast a line longer than the display scrolls — 0 to 10, where 0 does not scroll at all |
 | **`bus_delay`** | 2 | `DelayMult` | the delay multiplier: how long the driver waits between bytes |
 | **`refresh_seconds`** | 4 | `RefreshDisplay` | how often the whole screen is redrawn from scratch |
 | **`heartbeat`** | off | `Heartbeat` | LCDproc's blinking "I am alive" icon |
 | `screens` | a grid | — | which screens appear, and in which order |
-| `keys` | a grid | the driver's `KeyMatrix_…` | one row per key: the label printed on your panel, the name LCDd is told, and what the plugin does with the press |
+| `buttons` | a grid | — | one row per key: its name, the label printed on it, the byte it sends (where it sends one) and what a press does |
 
 The first three speeds are the server's own settings and exist whatever the panel is. The last two
 belong to the **driver**: `DelayMult` is an `hd44780` and `sed1520` option and `RefreshDisplay` an
@@ -243,8 +248,68 @@ None of which the plugin depends on:
 - The settings page carries a **key test** that says which position last reported, so somebody on
   unknown hardware finds out in ten seconds instead of guessing for an evening.
 
+## The buttons and the menu
+
+Every key does what its row on the **Buttons** tab says: next or previous screen, open the menu, back
+to the rotation, hold or resume the rotation, show one chosen screen, the backlight, or nothing. A key
+with no row keeps its default - down for the next screen, up for the previous one, Enter for the
+menu, Escape back to the rotation.
+
+The menu is laid out the way the vendor's own firmware lays out its menu on this hardware (read off
+the XGS 3300's original firmware): a main menu of lists, each entry opening another list, showing two
+lines, or doing something.
+
+| Main menu | What is in it |
+| --- | --- |
+| System | date and time, uptime, processor and memory, load average, disk, OPNsense version, temperature |
+| Network | every assigned interface with its address or why it has none, the default gateway |
+| Screens | the rotation's screens - choosing one holds it on the panel |
+| Power | Reboot and Shutdown, when `panel_power` is on |
+
+In the menu the arrows move, Enter opens and Escape goes back, whatever the rows say. Reboot and
+Shutdown sit behind the vendor's two-step confirmation: Enter opens the entry, a step down reaches
+"Confirm", and Enter again carries it out, so no single stray press can. Every request is written to
+the system log.
+
+**The XGS 3300's keys are not polled.** Its panel bridge, a GIFAR GMRU20X4, never answers LCDd's key
+request (`FE 06` - four requests, nothing back) and instead sends one letter the moment a key goes
+down. Measured 2026-10-17 with the owner pressing each key in turn:
+
+| Printed on the panel | Byte sent |
+| --- | --- |
+| Enter | `41` (A) |
+| Esc | `42` (B) |
+| ▲ | `43` (C) |
+| ▼ | `44` (D) |
+
+LCDd would read such a byte as an answer it did not expect and throw it away, so no press could ever
+reach a client. On a panel like this that LCDd still draws, the plugin tells LCDd `Keypad=no` - it
+then neither polls nor reads the port - and the screen client opens the same port read-only and takes
+the bytes itself; on the XGS 3300, which the plugin draws itself (below), it reads them directly. The
+appliance table carries the codes for the panels where they were measured; **Learn the codes from the
+panel** finds them on any other panel that sends its keys this way, and a code in the grid outranks the
+table.
+
+**The XGS 3300's panel is drawn by the plugin, not by LCDd.** Under LCDd its whole picture crept
+around the two rows as if they were one ring of forty characters - the end of the first row came back
+at the start of the second, 14 columns along and later 17 (the owner's photographs, 2026-10-17).
+Three test patterns photographed on the glass the same day showed why: the bridge carries out **no
+positioning command at all** - `FE 01` clear, `FE 02` home, `FE 80`/`FE C0` line addresses and the
+rest are swallowed and do nothing, sent back to back or with a pause - and writes every character at a
+cursor that runs round all forty cells, the first row and then the second. LCDd rewrites only what
+changed, so each update moved the picture by however many characters it wrote.
+
+So where the appliance table says `"direct": true`, LCDd is not started: the screen client draws the
+panel itself and only ever writes **forty characters at once, never a command**, which brings the
+cursor back to the cell it started from. Which cell that is - wherever earlier writers left it, kept
+until the panel loses power - is set once: **Align the text** on the Buttons tab puts a ruler of forty
+different characters on the panel and you click the one you see in its top-left corner. While the
+ruler is up the panel's arrows move the text one cell a press instead of changing screens, and Enter
+or Escape ends it - the same as System > Align the text in the panel's own menu. The keys are read from the
+same port, and the page, the rotation, the menu and the test line work the same either way.
+
 Why the keys are hard is worth one sentence, because it explains why "I listened and saw nothing" is
-not the end of it: on this connection type the keys are **polled**, never volunteered — the host
+not the end of it: on the XG 330's connection type the keys are **polled**, never volunteered — the host
 sends a poll byte and the panel answers with a key code (documented in LCDproc's own
 `hd44780-serial.c`). Listening passively to the port therefore shows nothing at all, forever,
 whether the keys work or not.

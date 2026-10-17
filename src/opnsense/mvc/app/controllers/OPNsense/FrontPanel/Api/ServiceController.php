@@ -125,6 +125,43 @@ class ServiceController extends ApiMutableServiceControllerBase
     }
 
     /**
+     * The keys this appliance is known to have, in the order the panel has them, with the label
+     * printed on each, the byte it sends where that was measured, and its default action. The
+     * Buttons tab draws the panel from this.
+     */
+    public function buttonsAction()
+    {
+        return $this->response($this->run('buttons'));
+    }
+
+    /**
+     * The presses the screen client has recorded, so the Buttons tab can light up the key that
+     * somebody at the rack is pressing - and select it, which is the quickest way to find out
+     * which of the drawn keys is which.
+     */
+    public function pressesAction()
+    {
+        return $this->response($this->run('presses'));
+    }
+
+    /**
+     * Line up the text on a panel the plugin draws as a ring of cells: show the ruler, say which
+     * of its forty characters is in the top left corner, or hide it. Anything else is refused
+     * here rather than passed to a command line.
+     */
+    public function alignAction()
+    {
+        if (!$this->request->isPost()) {
+            return ['status' => 'failed'];
+        }
+        $what = (string)$this->request->getPost('what', null, '');
+        if (!preg_match('/^(show|hide|[0-9]|[1-3][0-9])$/', $what)) {
+            return ['status' => 'failed', 'detail' => gettext('Unknown alignment request.')];
+        }
+        return $this->response($this->run('align', [$what]));
+    }
+
+    /**
      * Put one line on the panel, hold it for a moment, and give the panel back.
      *
      * Nothing here touches the serial port: the line goes to LCDd like every other screen, which

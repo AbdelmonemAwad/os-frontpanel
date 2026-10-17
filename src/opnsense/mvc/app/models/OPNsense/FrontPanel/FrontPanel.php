@@ -37,6 +37,20 @@ class FrontPanel extends BaseModel
     {
         $messages = parent::performValidation($validateFullModel);
 
+        /* A button told to show one screen has to be told which. The grid's own fields cannot
+           say so: the screen column is optional for every other action. */
+        foreach ($this->buttons->button->iterateItems() as $uuid => $button) {
+            if (!$validateFullModel && !$button->isFieldChanged()) {
+                continue;
+            }
+            if ((string)$button->action === 'screen' && (string)$button->target === '') {
+                $messages->appendMessage(new Message(
+                    gettext('Choose the screen this button shows.'),
+                    $button->target->__reference
+                ));
+            }
+        }
+
         $general = $this->general;
         if (!$validateFullModel && !$general->isFieldChanged()) {
             return $messages;
