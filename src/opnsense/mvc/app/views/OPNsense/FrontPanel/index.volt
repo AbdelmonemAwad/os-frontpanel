@@ -108,8 +108,8 @@
                 "{{ lang._('At 2400 baud the display and the keypad share the line: with screens changing every 3 seconds and a full redraw every 4, two thirds of the presses were lost. A quiet screen is what makes this keypad reliable: hold the screen still while measuring the keys, and keep the redraw interval wide on a panel whose keys are used.') }}",
             'Sophos XGS front panel (the XGS 3300: SMBIOS XGS, board 17 / system 3300r1)':
                 "{{ lang._('Sophos XGS front panel (the XGS 3300: SMBIOS XGS, board 17 / system 3300r1)') }}",
-            'XGS 3300 (smbios XGS, version 17), 2026-10-02: the display is verified at 9600 - LCDd with hd44780, ConnectionType=ezio and Speed=9600 drew two lines of text the owner read on the panel as correct. The keypad has NOT been measured on this model: the map above is copied from the XG 330 rev 2 and is a guess here until the key test is run. Size: 20 columns by 2 lines - the owner set 20x2 on the settings page on 2026-10-13 and the panel paints it, and the GIFAR bridge on this board drives a 20x2 HD44780 (os-xgs-npu\'s hardware page); the entry had said 16x2, the XG 330\'s size, until then.':
-                "{{ lang._('XGS 3300 (smbios XGS, version 17), 2026-10-02: the display is verified at 9600 - LCDd with hd44780, ConnectionType=ezio and Speed=9600 drew two lines of text the owner read on the panel as correct. The keypad has NOT been measured on this model: the map above is copied from the XG 330 rev 2 and is a guess here until the key test is run. Size: 20 columns by 2 lines - the owner set 20x2 on the settings page on 2026-10-13 and the panel paints it, and the GIFAR bridge on this board drives a 20x2 HD44780 (os-xgs-npu\'s hardware page); the entry had said 16x2, the XG 330\'s size, until then.') }}",
+            'XGS 3300 (smbios XGS, version 17), 2026-10-02: the display is verified at 9600 - LCDd with hd44780, ConnectionType=ezio and Speed=9600 drew two lines of text the owner read on the panel as correct. The keys were measured on 2026-10-17: the owner pressed Enter, Esc, up and down in turn and the bridge sent A, B, C and D, one byte per press, without being asked. Size: 20 columns by 2 lines - the owner set 20x2 on the settings page on 2026-10-13 and the panel paints it, and the GIFAR bridge on this board drives a 20x2 HD44780 (os-xgs-npu\'s hardware page); the entry had said 16x2, the XG 330\'s size, until then.':
+                "{{ lang._('XGS 3300 (smbios XGS, version 17), 2026-10-02: the display is verified at 9600 - LCDd with hd44780, ConnectionType=ezio and Speed=9600 drew two lines of text the owner read on the panel as correct. The keys were measured on 2026-10-17: the owner pressed Enter, Esc, up and down in turn and the bridge sent A, B, C and D, one byte per press, without being asked. Size: 20 columns by 2 lines - the owner set 20x2 on the settings page on 2026-10-13 and the panel paints it, and the GIFAR bridge on this board drives a 20x2 HD44780 (os-xgs-npu\'s hardware page); the entry had said 16x2, the XG 330\'s size, until then.') }}",
             'Speed=9600 is required. ConnectionType=ezio on its own fixes the line at 2400, which is right for the XG 330 rev 2 and wrong here: at 2400 this panel draws scattered x-with-a-bar characters - HD44780 code 0xF8 - which is the signature of bytes arriving at a quarter of the receiver\'s rate. A long start bit fills the low three bits with zeros and the next long bit fills the rest with ones.':
                 "{{ lang._('Speed=9600 is required. ConnectionType=ezio on its own fixes the line at 2400, which is right for the XG 330 rev 2 and wrong here: at 2400 this panel draws scattered x-with-a-bar characters - HD44780 code 0xF8 - which is the signature of bytes arriving at a quarter of the receiver\'s rate. A long start bit fills the low three bits with zeros and the next long bit fills the rest with ones.') }}",
             'The vendor\'s own daemon sets the port with `stty ispeed 2400`. That sets only the INPUT speed, and a 16550-class UART has a single divisor, so on the vendor\'s system the line stays at the 9600 default. Reading the vendor\'s line setting literally is what kept this panel garbled for a week.':
@@ -118,6 +118,10 @@
                 "{{ lang._('A rate sweep that sets the speed on the .init device and then writes through a fresh open of the port is not a reliable way to test this - that method is how every candidate rate once looked wrong. LCDd opens the port once and sets it with tcsetattr, which is why the decisive test was LCDd itself with Speed set.') }}",
             'Heartbeat stays off, as on the XG 330: the panel has no programmable character for it.':
                 "{{ lang._('Heartbeat stays off, as on the XG 330: the panel has no programmable character for it.') }}",
+            'The keys are not read by LCDd here. The bridge never answers LCDd\'s key request (FE 06) and sends a letter of its own accord instead, which LCDd would discard - so LCDd is told Keypad=no and the plugin reads the port itself.':
+                "{{ lang._('The keys are not read by LCDd here. The bridge never answers LCDd\'s key request (FE 06) and sends a letter of its own accord instead, which LCDd would discard - so LCDd is told Keypad=no and the plugin reads the port itself.') }}",
+            'The panel is not drawn by LCDd either. Its bridge carries out no positioning command at all - clear, home and the line addresses are swallowed and do nothing - and writes every character at a cursor that runs round all forty cells, the first row and then the second. LCDd rewrites only what changed, so each update moved the whole picture by however many characters it wrote. The plugin draws this panel itself, always forty characters at once, which leaves the cursor where it was; the owner lines the text up once from the Buttons tab.':
+                "{{ lang._('The panel is not drawn by LCDd either. Its bridge carries out no positioning command at all - clear, home and the line addresses are swallowed and do nothing - and writes every character at a cursor that runs round all forty cells, the first row and then the second. LCDd rewrites only what changed, so each update moved the whole picture by however many characters it wrote. The plugin draws this panel itself, always forty characters at once, which leaves the cursor where it was; the owner lines the text up once from the Buttons tab.') }}",
             'Sophos XG / XGS (panel not confirmed on this model)':
                 "{{ lang._('Sophos XG / XGS (panel not confirmed on this model)') }}",
             'Nobody has confirmed this model yet. Press Test after applying: if the panel stays dark, try the driver list - mtc_s16209x lights a screen of this shape and cannot read a button, which is the honest fallback. The key map is copied from the XG 330 rev 2 and is a guess here: measure it with the key test before you trust which button is which.':
@@ -473,6 +477,10 @@
                 draw_cards();
                 draw_preview();
                 update_rotation_note();
+                if (!bt_selected) {
+                    /* the drawn panel shows what the real one is showing */
+                    bt_lcd_idle();
+                }
                 if (typeof done === 'function') {
                     done();
                 }
@@ -997,6 +1005,479 @@
             });
         }
 
+        /* ------------------------------------------------------------------ the buttons */
+
+        /* The tab is a drawing of the panel. A key is chosen by clicking it there, by clicking its
+           card, or by pressing it at the rack - the page watches the presses while the tab is open
+           and lights up the one that arrived. Choosing what it does is one click on a tile, saved at
+           once: the screen client looks at the settings every few seconds and follows them without
+           a restart. The grid behind "Show as a table" is the same data, for keys the drawing does
+           not know and for the codes. */
+        const BT_PRESS_MS = 1500;
+        const bt_actions = ['next', 'previous', 'menu', 'back', 'pause', 'screen', 'backlight', 'none'];
+        const bt_action_text = {
+            'next': "{{ lang._('Next screen') }}",
+            'previous': "{{ lang._('Previous screen') }}",
+            'menu': "{{ lang._('Open the menu') }}",
+            'back': "{{ lang._('Back to the rotation') }}",
+            'pause': "{{ lang._('Hold or resume the rotation') }}",
+            'screen': "{{ lang._('Show one screen') }}",
+            'backlight': "{{ lang._('Backlight on or off') }}",
+            'none': "{{ lang._('Nothing') }}"
+        };
+        const bt_action_icon = {
+            'next': 'fa-arrow-circle-down',
+            'previous': 'fa-arrow-circle-up',
+            'menu': 'fa-bars',
+            'back': 'fa-undo',
+            'pause': 'fa-pause-circle',
+            'screen': 'fa-desktop',
+            'backlight': 'fa-lightbulb-o',
+            'none': 'fa-ban'
+        };
+        /* what is printed on the arrow keys, drawn rather than spelled */
+        const bt_glyph = {'Up': '▲', 'Down': '▼', 'Left': '◀', 'Right': '▶'};
+
+        let bt_defaults = [];       /* the keys this appliance has, in the panel's order */
+        let bt_direct = false;      /* whether the plugin reads this panel's keys itself */
+        let bt_ring = false;        /* whether the plugin draws this panel as a ring of cells */
+        let bt_rows = {};           /* key name -> the owner's row, where there is one */
+        let bt_selected = '';
+        let bt_seen = null;         /* presses counted at the last look, null before the first */
+        let bt_busy = false;
+
+        function bt_option(field) {
+            if (!is_object(field)) {
+                return field === undefined || field === null ? '' : String(field);
+            }
+            let chosen = '';
+            Object.keys(field).forEach(function (name) {
+                if (Number(field[name].selected) === 1) {
+                    chosen = name;
+                }
+            });
+            return chosen;
+        }
+
+        function bt_default(key) {
+            return bt_defaults.filter(function (row) { return row.key === key; })[0] || {'key': key};
+        }
+
+        function bt_keys() {
+            const keys = bt_defaults.map(function (row) { return row.key; });
+            Object.keys(bt_rows).sort().forEach(function (key) {
+                if (keys.indexOf(key) < 0) {
+                    keys.push(key);
+                }
+            });
+            return keys;
+        }
+
+        /* what a key does now: the owner's row where it is on, the appliance's default otherwise */
+        function bt_effective(key) {
+            const row = bt_rows[key];
+            const fallback = bt_default(key);
+            const own = row && row.enabled;
+            return {
+                'own': !!own,
+                'label': plain((row && row.label) || fallback.label || key),
+                'code': (row && row.code) || fallback.code || '',
+                'action': own ? row.action : (fallback.action || 'none'),
+                'target': own ? row.target : ''
+            };
+        }
+
+        function bt_face_label(key, label) {
+            return bt_glyph[key] || label;
+        }
+
+        function bt_lcd(lines) {
+            const $lines = $('#fp-face-lcd .fp-face-line');
+            $lines.eq(0).text(lines[0] || '');
+            $lines.eq(1).text(lines[1] || '');
+        }
+
+        function bt_lcd_idle() {
+            const screens = (preview_doc !== null && $.isArray(preview_doc.screens)) ? preview_doc.screens : [];
+            const first = screens.filter(function (entry) {
+                return entry.enabled !== false && entry.available !== false && $.isArray(entry.lines);
+            })[0];
+            bt_lcd(first ? first.lines : ['', '']);
+        }
+
+        function bt_draw() {
+            const keys = bt_keys();
+            const $face = $('#fp-face-keys').empty();
+            const $cards = $('#fp-bt-cards').empty();
+
+            keys.forEach(function (key) {
+                const now = bt_effective(key);
+                $face.append($('<button type="button" class="fp-key"/>')
+                    .attr('data-key', key)
+                    .attr('title', now.label)
+                    .toggleClass('selected', key === bt_selected)
+                    .text(bt_face_label(key, now.label)));
+
+                let tone = now.own ? 'ok' : '';
+                if (bt_direct && !now.code) {
+                    tone = 'warn';
+                }
+                const sub = [];
+                if (now.action === 'screen' && now.target) {
+                    sub.push(screen_title[now.target] || now.target);
+                }
+                sub.push(now.own ? "{{ lang._('set here') }}" : "{{ lang._('default') }}");
+                if (bt_direct) {
+                    sub.push(now.code ? "{{ lang._('code') }} " + now.code : "{{ lang._('no code yet') }}");
+                }
+                $cards.append(card(tone, bt_action_icon[now.action] || 'fa-circle-o', now.label,
+                    plain(bt_action_text[now.action] || now.action), sub.map(plain).join(' · '))
+                    .addClass('fp-bt-card')
+                    .toggleClass('selected', key === bt_selected)
+                    .attr('data-key', key)
+                    .attr('role', 'button')
+                    .attr('tabindex', '0'));
+            });
+
+            if (!keys.length) {
+                $('#buttons-note').text(plain("{{ lang._('This appliance has no known keys. Show the table to add one by name.') }}"));
+            }
+            bt_draw_editor();
+        }
+
+        function bt_draw_editor() {
+            const $editor = $('#fp-bt-editor');
+            if (!bt_selected) {
+                $editor.hide();
+                bt_lcd_idle();
+                return;
+            }
+            const now = bt_effective(bt_selected);
+            $('#fp-bt-editing').text(plain("{{ lang._('What this key does:') }}") + ' ' + now.label);
+            $('#fp-bt-reset').toggle(!!bt_rows[bt_selected]);
+
+            const $actions = $('#fp-bt-actions').empty();
+            bt_actions.forEach(function (action) {
+                $actions.append($('<button type="button" class="fp-tile"/>')
+                    .attr('data-action', action)
+                    .toggleClass('active', action === now.action)
+                    .append($('<i class="fa fa-fw"/>').addClass(bt_action_icon[action]))
+                    .append($('<span/>').text(plain(bt_action_text[action]))));
+            });
+
+            const $screens = $('#fp-bt-screens').empty();
+            Object.keys(screen_title).forEach(function (key) {
+                $screens.append($('<button type="button" class="fp-tile fp-tile-small"/>')
+                    .attr('data-target', key)
+                    .toggleClass('active', now.action === 'screen' && now.target === key)
+                    .text(plain(screen_title[key])));
+            });
+            $('#fp-bt-screens-wrap').toggle(now.action === 'screen' || $editor.data('picking') === true);
+
+            bt_lcd([now.label, plain(bt_action_text[now.action] || now.action)]);
+            $editor.show();
+        }
+
+        function bt_load(done) {
+            ajaxGet('/api/frontpanel/service/buttons', {}, function (defaults) {
+                bt_defaults = (defaults && $.isArray(defaults.buttons)) ? defaults.buttons : [];
+                bt_direct = !!(defaults && defaults.direct);
+                bt_ring = !!(defaults && defaults.ring);
+                $('#fp-align').toggle(bt_ring);
+                ajaxGet('/api/frontpanel/settings/get', {}, function (data) {
+                    const grid = (((data || {}).frontpanel || {}).buttons || {}).button || {};
+                    bt_rows = {};
+                    Object.keys(is_object(grid) ? grid : {}).forEach(function (uuid) {
+                        const row = grid[uuid];
+                        bt_rows[String(row.key)] = {
+                            'uuid': uuid,
+                            'enabled': String(row.enabled) === '1',
+                            'label': String(row.label || ''),
+                            'code': String(row.code || ''),
+                            'action': bt_option(row.action),
+                            'target': bt_option(row.target)
+                        };
+                    });
+                    bt_draw();
+                    if (typeof done === 'function') {
+                        done();
+                    }
+                });
+            });
+        }
+
+        function bt_select(key) {
+            bt_selected = (bt_selected === key) ? '' : key;
+            $('#fp-bt-editor').data('picking', false);
+            $('#fp-bt-saved').text('');
+            bt_draw();
+        }
+
+        function bt_saved(message) {
+            $('#fp-bt-saved').text(plain(message));
+            window.setTimeout(function () { $('#fp-bt-saved').text(''); }, 4000);
+        }
+
+        function bt_assign(key, action, target) {
+            if (bt_busy) {
+                return;
+            }
+            const row = bt_rows[key];
+            const fallback = bt_default(key);
+            const payload = {'button': {
+                'enabled': '1',
+                'key': key,
+                'label': plain(row ? row.label : (fallback.label || '')),
+                'code': row ? row.code : (fallback.code || ''),
+                'action': action,
+                'target': target || ''
+            }};
+            const url = row ? '/api/frontpanel/settings/set_button/' + row.uuid : '/api/frontpanel/settings/add_button';
+            bt_busy = true;
+            ajaxCall(url, payload, function (data) {
+                bt_busy = false;
+                if (data && data.result === 'saved') {
+                    $('#fp-bt-editor').data('picking', false);
+                    bt_load(function () {
+                        bt_saved("{{ lang._('Saved. The panel follows within a few seconds.') }}");
+                    });
+                } else {
+                    const problems = (data && is_object(data.validations)) ? Object.values(data.validations).join(' ') : '';
+                    show_message(BootstrapDialog.TYPE_WARNING, "{{ lang._('Buttons') }}",
+                        "{{ lang._('The key could not be saved.') }}" + (problems ? '<br/><br/>' + esc(plain(problems)) : ''));
+                }
+            });
+        }
+
+        $('#fp-face-keys').on('click', '.fp-key', function () {
+            bt_select(String($(this).attr('data-key')));
+        });
+        $('#fp-bt-cards').on('click keydown', '.fp-bt-card', function (event) {
+            if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') {
+                return;
+            }
+            event.preventDefault();
+            bt_select(String($(this).attr('data-key')));
+        });
+        $('#fp-bt-actions').on('click', '.fp-tile', function () {
+            const action = String($(this).attr('data-action'));
+            if (action === 'screen') {
+                /* a screen has to be chosen before there is anything to save */
+                $('#fp-bt-editor').data('picking', true);
+                $('#fp-bt-actions .fp-tile').removeClass('active');
+                $(this).addClass('active');
+                $('#fp-bt-screens-wrap').show();
+                return;
+            }
+            bt_assign(bt_selected, action, '');
+        });
+        $('#fp-bt-screens').on('click', '.fp-tile', function () {
+            bt_assign(bt_selected, 'screen', String($(this).attr('data-target')));
+        });
+        $('#fp-bt-reset').click(function (event) {
+            event.preventDefault();
+            const row = bt_rows[bt_selected];
+            if (!row || bt_busy) {
+                return;
+            }
+            bt_busy = true;
+            ajaxCall('/api/frontpanel/settings/del_button/' + row.uuid, {}, function () {
+                bt_busy = false;
+                bt_load(function () {
+                    bt_saved("{{ lang._('Saved. The panel follows within a few seconds.') }}");
+                });
+            });
+        });
+
+        /* Aligning the text of a panel drawn as a ring: the panel shows forty different
+           characters, and the one in its top-left corner says how far the text is out. */
+        const ALIGN_RULER = '0123456789ABCDEFGHIJabcdefghijklmnopqrst';
+
+        function align(what, done) {
+            ajaxCall('/api/frontpanel/service/align', {'what': String(what)}, function (data) {
+                if (typeof done === 'function') {
+                    done(data);
+                }
+            });
+        }
+
+        $('#alignShowAct').click(function () {
+            const $chips = $('#fp-align-chips').empty();
+            for (let row = 0; row < 2; row++) {
+                const $row = $('<div class="fp-align-row"/>');
+                for (let column = 0; column < 20; column++) {
+                    const index = row * 20 + column;
+                    $row.append($('<button type="button" class="fp-chip"/>')
+                        .attr('data-index', index).text(ALIGN_RULER.charAt(index)));
+                }
+                $chips.append($row);
+            }
+            align('show', function (data) {
+                if (!data || data.status !== 'ok') {
+                    show_message(BootstrapDialog.TYPE_WARNING, "{{ lang._('Align the text') }}",
+                        "{{ lang._('The text could not be aligned.') }}" + failure_text(data));
+                    return;
+                }
+                $('#fp-align-pick').show();
+            });
+        });
+
+        $('#fp-align-chips').on('click', '.fp-chip', function () {
+            align($(this).attr('data-index'), function (data) {
+                $('#fp-align-pick').hide();
+                if (!data || data.status !== 'ok') {
+                    show_message(BootstrapDialog.TYPE_WARNING, "{{ lang._('Align the text') }}",
+                        "{{ lang._('The text could not be aligned.') }}" + failure_text(data));
+                    return;
+                }
+                bt_saved("{{ lang._('The text is aligned.') }}");
+            });
+        });
+
+        $('#alignHideAct').click(function (event) {
+            event.preventDefault();
+            $('#fp-align-pick').hide();
+            align('hide');
+        });
+
+        /* A press at the rack lights its key here and selects it - the quickest way to tell which
+           drawn key is which. The first look only takes the count, so presses from before the tab
+           was opened do not light anything. */
+        function bt_watch() {
+            if (!$('#buttons').hasClass('active') || bt_busy) {
+                return;
+            }
+            ajaxGet('/api/frontpanel/service/presses', {}, function (data) {
+                if (!data || data.status !== 'ok') {
+                    return;
+                }
+                const counts = is_object(data.counts) ? data.counts : {};
+                const total = Object.keys(counts).reduce(function (sum, key) { return sum + Number(counts[key] || 0); }, 0);
+                const recent = $.isArray(data.presses) ? data.presses : [];
+                if (bt_seen !== null && total > bt_seen && recent.length) {
+                    const key = String(recent[recent.length - 1].key);
+                    const $key = $('#fp-face-keys .fp-key').filter(function () { return $(this).attr('data-key') === key; });
+                    $key.addClass('pressed');
+                    window.setTimeout(function () { $key.removeClass('pressed'); }, 600);
+                    if (bt_selected !== key) {
+                        bt_select(key);
+                    }
+                }
+                bt_seen = total;
+            });
+        }
+        window.setInterval(bt_watch, BT_PRESS_MS);
+
+        $('#buttonsTableAct').click(function () {
+            const $table = $('#fp-bt-table');
+            const showing = $table.is(':visible');
+            $table.toggle(!showing);
+            $('.fp-bt-body').toggle(showing);
+            $(this).find('span').text(plain(showing ? "{{ lang._('Show as a table') }}" : "{{ lang._('Show the panel') }}"));
+            if (showing) {
+                bt_load();
+            } else {
+                reload_buttons();
+            }
+        });
+
+        $("#{{ formGridButton['table_id'] }}").UIBootgrid({
+            search: '/api/frontpanel/settings/search_button',
+            get: '/api/frontpanel/settings/get_button/',
+            set: '/api/frontpanel/settings/set_button/',
+            add: '/api/frontpanel/settings/add_button/',
+            del: '/api/frontpanel/settings/del_button/',
+            toggle: '/api/frontpanel/settings/toggle_button/'
+        });
+
+        function reload_buttons() {
+            $("#{{ formGridButton['table_id'] }}").bootgrid('reload');
+        }
+
+        function buttons_busy(busy) {
+            $('#buttonsApplyAct, #buttonsFillAct, #buttonsLearnAct').prop('disabled', busy);
+            $('#buttons_progress').toggleClass('fa fa-spinner fa-pulse', busy);
+        }
+
+        $('#buttonsApplyAct').click(function () {
+            buttons_busy(true);
+            apply_settings(function () {
+                buttons_busy(false);
+            });
+        });
+
+        $('#buttonsFillAct').click(function () {
+            buttons_busy(true);
+            ajaxCall('/api/frontpanel/settings/fill_buttons', {}, function (data) {
+                buttons_busy(false);
+                reload_buttons();
+                if (!data || data.status !== 'ok') {
+                    show_message(BootstrapDialog.TYPE_WARNING, "{{ lang._('Buttons') }}",
+                        "{{ lang._('The keys could not be added.') }}" + failure_text(data));
+                } else if (data.added === 0) {
+                    show_message(BootstrapDialog.TYPE_INFO, "{{ lang._('Buttons') }}",
+                        esc(plain("{{ lang._('Every key this appliance is known to have is already in the list.') }}")));
+                }
+            });
+        });
+
+        $('#buttonsLearnAct').click(function () {
+            BootstrapDialog.confirm({
+                title: "{{ lang._('Learn the codes from the panel') }}",
+                message: esc(plain("{{ lang._('The panel stops while it learns. It then names each key on its screen in turn: press the key it names within 15 seconds. It takes up to a minute, and the panel starts again by itself afterwards.') }}")),
+                type: BootstrapDialog.TYPE_INFO,
+                btnCancelLabel: "{{ lang._('Cancel') }}",
+                btnOKLabel: "{{ lang._('Start') }}",
+                callback: function (start) {
+                    if (!start) {
+                        return;
+                    }
+                    buttons_busy(true);
+                    bt_busy = true;
+                    $('#buttons-note').text(plain("{{ lang._('Watch the panel: it names each key in turn.') }}"));
+                    ajaxCall('/api/frontpanel/settings/learn_buttons', {}, function (data) {
+                        bt_busy = false;
+                        bt_seen = null;
+                        $('#buttons-note').text('');
+                        reload_buttons();
+                        bt_load();
+                        if (!data || data.status !== 'ok') {
+                            buttons_busy(false);
+                            show_message(BootstrapDialog.TYPE_WARNING, "{{ lang._('Learn the codes from the panel') }}",
+                                "{{ lang._('The codes could not be learned.') }}" + failure_text(data));
+                            return;
+                        }
+                        const learned = data.learned || {};
+                        const names = Object.keys(learned);
+                        if (names.length === 0) {
+                            buttons_busy(false);
+                            show_message(BootstrapDialog.TYPE_WARNING, "{{ lang._('Learn the codes from the panel') }}",
+                                esc(plain("{{ lang._('No key sent anything. This panel does not send its keys by itself; if they work, LCDproc reads them.') }}")));
+                            return;
+                        }
+                        const $list = $('<ul/>');
+                        names.forEach(function (name) {
+                            $list.append($('<li/>').append($('<code/>').text(name)).append(' ').append($('<code/>').text(learned[name])));
+                        });
+                        let message = esc(plain("{{ lang._('Learned and saved:') }}")) + $('<div/>').append($list).html();
+                        if ((data.missing || []).length) {
+                            message += esc(plain("{{ lang._('Not pressed in time:') }}")) + ' ' + esc(data.missing.join(', '));
+                        }
+                        /* a new code decides who reads the port, and that is settled when LCDd starts */
+                        apply_settings(function () {
+                            buttons_busy(false);
+                            show_message(BootstrapDialog.TYPE_SUCCESS, "{{ lang._('Learn the codes from the panel') }}", message);
+                        });
+                    });
+                }
+            });
+        });
+
+        $('a[href="#buttons"]').on('shown.bs.tab', function () {
+            bt_seen = null;
+            bt_load();
+        });
+
         /* ------------------------------------------------------------------ page plumbing */
 
         $('#previewRefreshAct').click(function () {
@@ -1022,7 +1503,7 @@
         let ticks = 0;
         window.setInterval(function () {
             ticks += 1;
-            if ($('#preview').hasClass('active')) {
+            if ($('#preview').hasClass('active') || ($('#buttons').hasClass('active') && !bt_selected)) {
                 reload_preview();
             } else if ($('#diagnostics').hasClass('active') && (ticks * PREVIEW_MS) % DIAGNOSTICS_MS === 0) {
                 reload_diagnostics();
@@ -1268,12 +1749,212 @@
         opacity: 0.6;
         margin-inline-start: 4px;
     }
+
+    /* The Buttons tab. The panel is a drawing of the hardware, so its colours are the panel's own
+       rather than the theme's, and it stays left to right in every language. */
+    .fp-bt-head {
+        padding: 10px 15px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .fp-bt-tools .btn {
+        margin-inline-start: 4px;
+    }
+    .fp-bt-body {
+        padding: 0 15px 15px;
+    }
+    .fp-face {
+        display: inline-block;
+        max-width: 100%;
+        background: linear-gradient(#22359a, #172679);
+        border-radius: 8px;
+        padding: 18px 22px 20px;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
+        margin-bottom: 12px;
+    }
+    .fp-face-lcd {
+        font-family: "Courier New", Courier, monospace;
+        font-size: 19px;
+        font-weight: bold;
+        line-height: 1.35;
+        color: #ffffff;
+        background: #8ea4e6;
+        border: 3px solid #0c1452;
+        border-radius: 3px;
+        padding: 6px 10px;
+        width: calc(20ch + 26px);
+        max-width: 100%;
+        white-space: pre;
+        overflow: hidden;
+        text-shadow: 0 0 1px rgba(255, 255, 255, 0.6);
+    }
+    .fp-face-line {
+        height: 1.35em;
+    }
+    .fp-face-keys {
+        display: flex;
+        gap: 14px;
+        margin-top: 16px;
+    }
+    .fp-key {
+        flex: 0 1 62px;
+        min-width: 0;
+        height: 36px;
+        padding: 0 10px;
+        border-radius: 6px;
+        border: 1px solid #0c1452;
+        background: linear-gradient(#f7f8fc, #c8cfe6);
+        color: #2b3350;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 3px 0 #0c1452;
+        transition: transform 0.08s, box-shadow 0.08s, background 0.2s;
+    }
+    .fp-key:hover {
+        background: linear-gradient(#ffffff, #d8def0);
+    }
+    .fp-key.selected {
+        outline: 3px solid #f0ad4e;
+        outline-offset: 2px;
+    }
+    .fp-key.pressed {
+        transform: translateY(3px);
+        box-shadow: 0 0 0 #0c1452;
+        background: #ffe08a;
+    }
+    .fp-bt-cards {
+        padding: 0 0 12px;
+    }
+    .fp-align {
+        margin-bottom: 12px;
+    }
+    .fp-align-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+    }
+    .fp-align-ruler {
+        display: inline-block;
+        max-width: 100%;
+        overflow-x: auto;
+        background: #8ea4e6;
+        border: 3px solid #0c1452;
+        border-radius: 3px;
+        padding: 6px;
+        margin-bottom: 6px;
+    }
+    .fp-align-row {
+        display: flex;
+        gap: 2px;
+        margin: 2px 0;
+    }
+    .fp-chip {
+        width: 22px;
+        height: 28px;
+        padding: 0;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 2px;
+        background: transparent;
+        color: #ffffff;
+        font-family: "Courier New", Courier, monospace;
+        font-size: 17px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    .fp-chip:hover {
+        background: rgba(255, 255, 255, 0.25);
+        border-color: #ffffff;
+    }
+    .fp-bt-card {
+        cursor: pointer;
+    }
+    .fp-bt-card:hover {
+        background-color: rgba(128, 128, 128, 0.09);
+    }
+    .fp-bt-card.selected {
+        box-shadow: 0 0 0 2px #f0ad4e;
+    }
+    .fp-bt-editor {
+        border: 1px solid rgba(128, 128, 128, 0.25);
+        border-radius: 3px;
+        padding: 12px 14px;
+        background-color: rgba(128, 128, 128, 0.04);
+    }
+    .fp-bt-editor-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: baseline;
+        margin-bottom: 10px;
+    }
+    .fp-bt-reset {
+        margin-inline-start: auto;
+    }
+    .fp-bt-sub {
+        margin: 12px 0 6px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        opacity: 0.6;
+    }
+    .fp-tiles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .fp-tile {
+        flex: 0 1 150px;
+        min-width: 120px;
+        border: 1px solid rgba(128, 128, 128, 0.3);
+        border-radius: 3px;
+        padding: 10px 8px;
+        background-color: rgba(128, 128, 128, 0.04);
+        color: inherit;
+        text-align: center;
+        cursor: pointer;
+    }
+    .fp-tile .fa {
+        display: block;
+        margin: 0 auto 4px;
+        font-size: 20px;
+        opacity: 0.7;
+    }
+    .fp-tile:hover {
+        border-color: rgba(128, 128, 128, 0.6);
+    }
+    .fp-tile.active {
+        border-color: #5cb85c;
+        box-shadow: inset 0 0 0 1px #5cb85c;
+        background-color: rgba(92, 184, 92, 0.08);
+    }
+    .fp-tile-small {
+        flex-basis: 120px;
+        padding: 7px 8px;
+    }
+    .fp-buttons-bar {
+        padding: 10px 15px 15px;
+    }
+    .fp-buttons-bar .btn {
+        margin-inline-end: 6px;
+        margin-bottom: 4px;
+    }
+    @media (min-width: 768px) {
+        #buttons .tabulator-tableholder {
+            overflow-x: hidden;
+        }
+    }
 </style>
 
 <div class="fp-cards" id="fp-cards"></div>
 
 <ul class="nav nav-tabs" data-tabs="tabs" id="maintabs">
     <li><a data-toggle="tab" href="#settings">{{ lang._('Settings') }}</a></li>
+    <li><a data-toggle="tab" href="#buttons">{{ lang._('Buttons') }}</a></li>
     <li><a data-toggle="tab" href="#preview">{{ lang._('Preview') }}</a></li>
     <li><a data-toggle="tab" href="#diagnostics">{{ lang._('Diagnostics') }}</a></li>
 </ul>
@@ -1282,6 +1963,66 @@
     <div id="settings" class="tab-pane fade in">
         <div id="rotation-note"></div>
         {{ partial("layout_partials/base_form", ['fields': generalForm, 'id': 'frm_general', 'apply_btn_id': 'saveAct']) }}
+    </div>
+
+    <div id="buttons" class="tab-pane fade in">
+        <div class="fp-bt-head">
+            <span class="text-muted">{{ lang._('Click a key on the drawing, or press it on the panel, then choose what it does.') }}</span>
+            <span class="fp-bt-tools">
+                <button id="buttonsLearnAct" class="btn btn-default btn-xs" type="button">
+                    <i class="fa fa-fw fa-hand-pointer-o"></i> {{ lang._('Learn the codes from the panel') }}
+                </button>
+                <button id="buttonsTableAct" class="btn btn-default btn-xs" type="button">
+                    <i class="fa fa-fw fa-table"></i> <span>{{ lang._('Show as a table') }}</span>
+                </button>
+                <i id="buttons_progress"></i>
+            </span>
+        </div>
+        <div class="fp-bt-body">
+            {# A drawing of the hardware, so it stays left to right in every language. #}
+            <div class="fp-face" dir="ltr">
+                <div class="fp-face-lcd" id="fp-face-lcd"><div class="fp-face-line"></div><div class="fp-face-line"></div></div>
+                <div class="fp-face-keys" id="fp-face-keys"></div>
+            </div>
+            <div id="fp-align" class="fp-align" style="display: none;">
+                <div class="fp-align-head">
+                    <span class="text-muted">{{ lang._('If the text on the panel starts in the wrong place, show the ruler and pick the character in its top-left corner.') }}</span>
+                    <button id="alignShowAct" class="btn btn-default btn-xs" type="button">
+                        <i class="fa fa-fw fa-arrows-h"></i> {{ lang._('Align the text') }}
+                    </button>
+                </div>
+                <div id="fp-align-pick" style="display: none;">
+                    <div class="fp-bt-sub">{{ lang._('The ruler is on the panel. Click the character you see in its top-left corner - or move the text with the arrow keys on the panel until 0 is there, then press Enter.') }}</div>
+                    <div class="fp-align-ruler" dir="ltr" id="fp-align-chips"></div>
+                    <a href="#" id="alignHideAct">{{ lang._('Cancel') }}</a>
+                </div>
+            </div>
+            <div id="buttons-note" class="fp-note text-info"></div>
+            <div class="fp-cards fp-bt-cards" id="fp-bt-cards"></div>
+            <div class="fp-bt-editor" id="fp-bt-editor" style="display: none;">
+                <div class="fp-bt-editor-head">
+                    <b id="fp-bt-editing"></b>
+                    <span class="fp-bt-saved text-success" id="fp-bt-saved"></span>
+                    <a href="#" id="fp-bt-reset" class="fp-bt-reset">{{ lang._('Back to the default') }}</a>
+                </div>
+                <div class="fp-tiles" id="fp-bt-actions"></div>
+                <div id="fp-bt-screens-wrap" style="display: none;">
+                    <div class="fp-bt-sub">{{ lang._('Which screen') }}</div>
+                    <div class="fp-tiles" id="fp-bt-screens"></div>
+                </div>
+            </div>
+        </div>
+        <div id="fp-bt-table" style="display: none;">
+            {{ partial('layout_partials/base_bootgrid_table', formGridButton + {'command_width': '120'}) }}
+            <div class="fp-buttons-bar">
+                <button class="btn btn-primary" id="buttonsApplyAct" type="button">
+                    <b>{{ lang._('Apply') }}</b>
+                </button>
+                <button class="btn btn-default" id="buttonsFillAct" type="button">
+                    <i class="fa fa-fw fa-list"></i> {{ lang._('Add this appliance\'s keys') }}
+                </button>
+            </div>
+        </div>
     </div>
 
     {# The two other tabs are laid out the way OPNsense lays out a form: sections with a heading,
@@ -1387,3 +2128,5 @@
         </div>
     </div>
 </div>
+
+{{ partial("layout_partials/base_dialog", ['fields': buttonForm, 'id': formGridButton['edit_dialog_id'], 'label': lang._('Edit button')]) }}

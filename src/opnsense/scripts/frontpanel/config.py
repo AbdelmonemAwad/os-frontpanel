@@ -82,7 +82,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_XML = '/conf/config.xml'
 MODEL = './OPNsense/FrontPanel'
 GENERAL = MODEL + '/general'
-KEYGRID = MODEL + '/keys'
+KEYGRID = MODEL + '/buttons'
 
 CONF_DIR = '/usr/local/etc/frontpanel'
 LCDD_CONF = os.path.join(CONF_DIR, 'LCDd.conf')
@@ -141,13 +141,21 @@ DEFAULTS = {
     'screens': 'identity,wan,throughput,system,temperature,ports,message',
     'message': '',
     'throughput_if': '',
+    'power': True,
     'keys': [],
 }
 
 _SIZE = re.compile(r'^\s*(\d{1,3})\s*[xX]\s*(\d{1,3})\s*$')
 
-# "4,1" or "4_1" - a matrix position as the owner would write it.
-_POSITION = re.compile(r'^\s*(\d{1,2})\s*[,_ ]\s*(\d{1,2})\s*$')
+# The connection types the plugin can draw on itself: hd44780 behind a serial
+# bridge with the 0xFE instruction escape (bridge.ESCAPES).
+DIRECT_CONNECTIONS = ('ezio', 'lcdserializer', 'los-panel', 'vdr-lcd', 'pertelian')
+
+# A key's name, as LCDd and the button grid both spell it.
+_KEY_NAME = re.compile(r'^[A-Za-z0-9_]{1,32}$')
+
+# The byte a key sends, as the button grid keeps it: two hexadecimal digits.
+_CODE = re.compile(r'^[0-9A-Fa-f]{2}$')
 
 # What may appear on the right of an "=" in LCDd.conf. Deliberately narrow:
 # every value this plugin writes is a device path, a size, a number or a key
@@ -393,25 +401,14 @@ def _clamp(name, value):
     return max(low, min(high, number))
 
 
-def matrix_option(position):
-    """"4,1" -> "KeyMatrix_4_1", or '' when it is not a matrix position.
-
-    The position column belongs to the hardware and is the one thing on the
-    key grid nobody may edit, so anything that is not two small numbers is
-    dropped rather than written into LCDd.conf as a guess.
-    """
-    match = _POSITION.match(position or '')
-    if not match:
-        return ''
-    return 'KeyMatrix_%s_%s' % (match.group(1), match.group(2))
-
-
 def key_rows(root):
-    """The key grid from the configuration: one row per matrix position.
+    """The button grid from the configuration: one row per key, enabled ones only.
 
-    Three of the four columns are the owner's - the label printed on their own
-    metal, the name LCDd is told to call the key, and what the plugin does when
-    it arrives. Only the position is the hardware's.
+    Every column is the owner's. The name is what the key is called wherever a
+    press arrives from - LCDd for a panel its driver reads, this plugin for a
+    panel that sends a byte of its own accord - and `code` is that byte, which
+    only the second kind has. Where on the keypad a key sits is the hardware's
+    business and lives in the appliance table, never here.
     """
     rows = []
     section = root.find(KEYGRID)
@@ -419,38 +416,32 @@ def key_rows(root):
         return rows
 
     for node in section:
-        position = (node.findtext('position') or '').strip()
-        if not matrix_option(position):
+        if (node.findtext('enabled') or '1').strip() != '1':
             continue
+        name = (node.findtext('key') or '').strip()
+        if not _KEY_NAME.match(name):
+            continue
+        code = (node.findtext('code') or '').strip()
         rows.append({
-            'position': position.replace('_', ',').replace(' ', ''),
+            'key': name,
             'label': (node.findtext('label') or '').strip(),
-            'key': (node.findtext('key') or '').strip(),
+            'code': code.upper() if _CODE.match(code) else '',
             'action': (node.findtext('action') or '').strip(),
             'target': (node.findtext('target') or '').strip(),
         })
-
-    rows.sort(key=lambda row: row['position'])
     return rows
 
 
 def key_map(options, panel):
-    """The keys LCDd will be told this panel has, and where the map came from.
+    """The matrix map LCDd will be told this panel has, and where it came from.
 
-    Three possible sources, and the settings page is expected to say which one
-    it is looking at. A map that was measured on somebody else's appliance is
-    not a fact about this one, and LCDproc's own defaults for this connection
-    type are a worse guess still: they put Enter where this panel has its down
-    arrow, which is how a panel ends up scrolling the wrong way.
+    Only the appliance table writes one. A map that was measured on somebody
+    else's appliance is not a fact about this one, and LCDproc's own defaults
+    for this connection type are a worse guess still: they put Enter where the
+    XG 330 has its down arrow, which is how a panel ends up scrolling the wrong
+    way. The button grid names keys and says what they do; it does not move
+    them around the matrix.
     """
-    chosen = {}
-    for row in options.get('keys') or []:
-        name = matrix_option(row['position'])
-        if name and row.get('key'):
-            chosen[name] = row['key']
-    if chosen:
-        return chosen, 'settings'
-
     shipped = dict((panel or {}).get('keymap') or {})
     if shipped:
         return shipped, 'panels.json'
@@ -458,6 +449,56 @@ def key_map(options, panel):
     # Nothing to say. The driver's own defaults then apply, and build() reports
     # that plainly rather than letting the page imply somebody measured them.
     return {}, 'driver defaults'
+
+
+def key_codes(options, panel):
+    """{byte: key name} for a panel whose bridge sends a byte per press.
+
+    Measured, not polled: the XGS 3300's bridge answers nothing when asked for
+    its keys the EZIO way and instead sends one letter the moment a key goes
+    down (measured 2026-10-17, each key pressed in turn: Enter A, Escape B, up
+    C, down D). The appliance table carries such a map where one was measured,
+    and a code learned from the panel and kept in the button grid outranks it.
+    An empty answer means the keys, if any, are LCDd's to read.
+    """
+    codes = {}
+    for letter, name in ((panel or {}).get('keybytes') or {}).items():
+        if len(letter) == 1 and _KEY_NAME.match(name or ''):
+            codes[ord(letter)] = name
+    for row in options.get('keys') or []:
+        if row.get('code'):
+            byte = int(row['code'], 16)
+            for known in [code for code, name in codes.items() if name == row['key']]:
+                del codes[known]
+            codes[byte] = row['key']
+    return codes
+
+
+def draws_direct(options, panel):
+    """Whether the plugin draws this panel itself instead of starting LCDd.
+
+    Only where the appliance table says so, from a measurement: LCDd's way of
+    updating a line in place makes the XGS 3300's picture creep around its two
+    rows (2026-10-17), and the vendor's way - a clear, then each row whole -
+    does not. It needs a connection type whose commands are known, because
+    the plugin then writes them itself.
+    """
+    return (bool((panel or {}).get('direct'))
+            and bool(options.get('device'))
+            and (options.get('connection') or '').strip() in DIRECT_CONNECTIONS)
+
+
+def serial_speed(options, panel):
+    """The line speed of the panel's port, as LCDd is told it.
+
+    The appliance table's Speed where it has one - the XGS 3300 needs 9600 and
+    says so - and otherwise LCDproc's own default for the connection type, which
+    for ezio is 2400 and for the others in hd44780-serial.h is 9600.
+    """
+    speed = str(((panel or {}).get('options') or {}).get('Speed') or '').strip()
+    if speed.isdigit():
+        return int(speed)
+    return 2400 if (options.get('connection') or '').strip() == 'ezio' else 9600
 
 
 def settings(root=None):
@@ -489,6 +530,7 @@ def settings(root=None):
     values['enabled'] = text('enabled', '0') == '1'
     values['keypad'] = text('keypad', '1') == '1'
     values['heartbeat'] = text('heartbeat', '0') == '1'
+    values['power'] = text('panel_power', '1') == '1'
 
     for name in ('driver', 'connection', 'device', 'size', 'screens', 'message', 'throughput_if'):
         found = text(name)
@@ -533,6 +575,12 @@ def render(options, panel=None, known=None):
     dropped = []
     refused = []
 
+    # A panel whose bridge sends a byte per key is read by the plugin itself,
+    # and LCDd must then leave the port's input alone: with its keypad on it
+    # would send its poll several times a second and swallow the very bytes the
+    # plugin is waiting for, discarding each as an answer it did not expect.
+    direct = key_codes(options, panel) if options['keypad'] else {}
+
     lines = [
         '# Generated by os-frontpanel. Edits are lost the next time a setting',
         '# changes on System > Front Panel; change it there instead.',
@@ -547,7 +595,7 @@ def render(options, panel=None, known=None):
         # The key test reads LCDd's log, and LCDd names a key there only from
         # level 4 upwards, so that level is asked for when - and only when - the
         # keypad is switched on. Not a level higher: see REPORT_LEVEL_KEYS.
-        'ReportLevel=%d' % (REPORT_LEVEL_KEYS if options['keypad'] else REPORT_LEVEL),
+        'ReportLevel=%d' % (REPORT_LEVEL_KEYS if options['keypad'] and not direct else REPORT_LEVEL),
         # Our own screens are the point of the plugin. LCDproc's built-in
         # information screen would otherwise show the client count to somebody
         # walking past a rack.
@@ -673,11 +721,14 @@ def render(options, panel=None, known=None):
     if options['device']:
         emit('Device', options['device'])
     emit('Size', options['size'])
-    emit('Keypad', 'yes' if options['keypad'] else 'no')
+    emit('Keypad', 'yes' if options['keypad'] and not direct else 'no')
 
     mapped, source = key_map(options, panel)
     if not options['keypad']:
         mapped, source = {}, 'the keypad is off'
+    elif direct:
+        mapped = dict((name, '%02X' % code) for code, name in sorted(direct.items()))
+        source = 'read from the port by the plugin'
     elif mapped and known is not None and 'Keypad' not in known:
         # A driver with no Keypad option cannot read a button, whatever map it is
         # given - mtc_s16209x lights this shape of screen and can never do more.

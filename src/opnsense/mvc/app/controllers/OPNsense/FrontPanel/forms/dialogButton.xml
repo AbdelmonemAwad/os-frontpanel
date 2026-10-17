@@ -1,0 +1,43 @@
+<form>
+    <field>
+        <id>button.enabled</id>
+        <label>Enabled</label>
+        <type>checkbox</type>
+        <help>A row that is switched off is ignored, and the key keeps its default action.</help>
+        <grid_view>
+            <width>6em</width>
+            <type>boolean</type>
+            <formatter>rowtoggle</formatter>
+        </grid_view>
+    </field>
+    <field>
+        <id>button.key</id>
+        <label>Key</label>
+        <type>text</type>
+        <help>The key's name, as the panel's driver reports it: Enter, Escape, Up and Down on the Sophos panels. A press is matched to its row by this name.</help>
+    </field>
+    <field>
+        <id>button.label</id>
+        <label>Printed on the key</label>
+        <type>text</type>
+        <help>What the key says on the panel, so the row is easy to find. The learning shows it on the glass when it asks for this key.</help>
+    </field>
+    <field>
+        <id>button.code</id>
+        <label>Code</label>
+        <type>text</type>
+        <help>The byte this key sends, as two hexadecimal digits. Only panels whose bridge sends a byte by itself have one - the XGS 3300 does - and the plugin then reads the port itself. Leave it empty to use the code the appliance table measured, or use Learn the codes to read it from the panel.</help>
+    </field>
+    <field>
+        <id>button.action</id>
+        <label>Action</label>
+        <type>dropdown</type>
+        <help>What a press does while the screens rotate. In the menu the arrows move, Enter opens and Escape goes back, whatever is chosen here.</help>
+    </field>
+    <field>
+        <id>button.target</id>
+        <label>Screen</label>
+        <type>dropdown</type>
+        <help>The screen this key shows, for the action Show one screen.</help>
+    </field>
+</form>

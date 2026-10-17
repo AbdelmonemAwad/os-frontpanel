@@ -40,7 +40,13 @@
         <id>frontpanel.general.keypad</id>
         <label>Read the keys</label>
         <type>checkbox</type>
-        <help>Poll the keys beside the screen. They are polled and never volunteered: the firewall asks the panel whether a button is down, and a panel that is never asked answers nothing, so no press arrives at all unless this is on. On this appliance all four keys report, measured one at a time. On a panel nobody has measured they may report nothing however long you press, which is a limit of the hardware and not a fault - the rotation runs on its timer either way, and nothing on the screen waits for a press. The diagnostics tab shows what the driver has actually reported.</help>
+        <help>Read the buttons beside the screen. Most panels of this kind are polled: the firewall asks whether a button is down, and a panel that is never asked answers nothing. Some send a byte of their own accord instead - the XGS 3300's does - and the plugin then reads the port itself. What each button does is set on the Buttons tab. The rotation runs on its timer either way, and nothing on the screen waits for a press.</help>
+    </field>
+    <field>
+        <id>frontpanel.general.panel_power</id>
+        <label>Reboot and shutdown from the panel</label>
+        <type>checkbox</type>
+        <help>Offer Reboot and Shutdown in the panel's menu. Each sits behind a two-step confirmation, as on the vendor's own firmware: Enter opens it, a step down reaches the confirmation and Enter again carries it out, so a single stray press cannot. Every request is written to the system log.</help>
     </field>
     <field>
         <type>header</type>

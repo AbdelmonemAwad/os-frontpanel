@@ -150,6 +150,14 @@ frontpanel_trace()
 # nothing, so the rest of this script never has to ask twice whether a pidfile means
 # anything.
 #
+# Who draws the panel. "direct" is a panel the appliance table says LCDd draws
+# wrongly - the XGS 3300's - and then only the screen client runs, talking to
+# the panel's bridge itself; anything else is LCDd with the client feeding it.
+frontpanel_direct()
+{
+	[ "$("${frontpanel_client}" mode 2> /dev/null)" = "direct" ]
+}
+
 frontpanel_pid()
 {
 	local _pid _junk
@@ -248,7 +256,8 @@ frontpanel_prestart()
 	# the second client would then be refused by daemon(8) because the first still holds the
 	# pidfile, and a start that got as far as lighting the panel would be undone again. Take
 	# the orphan away first: it is talking to nobody.
-	if [ -z "$(frontpanel_pid "${frontpanel_lcdd_pid}")" ] &&
+	if ! frontpanel_direct &&
+	    [ -z "$(frontpanel_pid "${frontpanel_lcdd_pid}")" ] &&
 	    [ -n "$(frontpanel_pid "${frontpanel_client_pid}")" ]; then
 		frontpanel_trace "prestart: an orphaned client was running with no LCDd; stopping it"
 		frontpanel_terminate "$(frontpanel_pid "${frontpanel_client_pid}")" \
@@ -311,6 +320,11 @@ frontpanel_start()
 {
 	echo "Starting ${name}."
 	frontpanel_trace "start: entered"
+
+	if frontpanel_direct; then
+		frontpanel_start_direct
+		return $?
+	fi
 
 	# The old log is moved aside before anything is started. The settings page answers "has a
 	# key on this panel ever been pressed" out of this file, and that answer is only about the
@@ -418,12 +432,58 @@ frontpanel_stop()
 	return 0
 }
 
+# The panel drawn by the plugin itself: LCDd must not hold the port, and the
+# screen client is the whole service.
+frontpanel_start_direct()
+{
+	if [ -n "$(frontpanel_pid "${frontpanel_lcdd_pid}")" ]; then
+		frontpanel_trace "start: direct, stopping an LCDd that still holds the port"
+		frontpanel_terminate "$(frontpanel_pid "${frontpanel_lcdd_pid}")" \
+		    "$(frontpanel_pid "${frontpanel_lcdd_super}")"
+		rm -f "${frontpanel_lcdd_pid}" "${frontpanel_lcdd_super}"
+	fi
+
+	if [ -n "$(frontpanel_pid "${frontpanel_client_pid}")" ]; then
+		frontpanel_trace "start: direct, the screen client is already up"
+		return 0
+	fi
+
+	if ! /usr/sbin/daemon -f -t "${name}: client" \
+	    -p "${frontpanel_client_pid}" -P "${frontpanel_client_super}" \
+	    -o "${frontpanel_client_log}" -H \
+	    "${frontpanel_client}" client; then
+		frontpanel_trace "start: direct, daemon(8) would not launch the screen client"
+		warn "${name}: the screen client could not be started"
+		return 1
+	fi
+
+	if ! frontpanel_await "${frontpanel_client_pid}" > /dev/null; then
+		frontpanel_trace "start: direct, the screen client did not stay up: $(tail -n 3 \
+		    "${frontpanel_client_log}" 2> /dev/null | tr '\n' ' ')"
+		warn "${name}: the screen client did not stay up. Its last words were:"
+		tail -n 10 "${frontpanel_client_log}" 2> /dev/null
+		return 1
+	fi
+
+	frontpanel_trace "start: up, drawn directly by client $(frontpanel_pid "${frontpanel_client_pid}")"
+	return 0
+}
+
 frontpanel_status()
 {
 	local _lcdd _client
 
 	_lcdd=$(frontpanel_pid "${frontpanel_lcdd_pid}")
 	_client=$(frontpanel_pid "${frontpanel_client_pid}")
+
+	if frontpanel_direct; then
+		if [ -n "${_client}" ]; then
+			echo "${name} is running as pid ${_client} (the screen client, drawing the panel itself)."
+			return 0
+		fi
+		echo "${name} is not running."
+		return 1
+	fi
 
 	# The wording is not free. OPNsense reads this line and looks in it for "not running"
 	# first and for "is running" second, so the two phrases must never appear together. Half

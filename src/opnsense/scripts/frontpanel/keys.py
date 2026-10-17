@@ -28,10 +28,15 @@
 
     Whether the buttons beside the panel do anything, and how we know.
 
-    The four keys are polled, never volunteered: the host sends a poll byte and
-    the panel answers with a key code. Nothing arrives by listening, which is
-    why a passive probe on the reference machine saw nothing for a long time
+    On the XG 330 the four keys are polled, never volunteered: the host sends a
+    poll byte and the panel answers with a key code. Nothing arrives by
+    listening, which is why a passive probe there saw nothing for a long time
     and why the plugin treats keys as an enhancement rather than a requirement.
+
+    The XGS 3300's bridge is the other way round (measured 2026-10-17): it
+    answers no poll at all and sends one letter the moment a key goes down. On
+    such a panel LCDd is told to leave the keys alone and the screen client
+    reads the port itself - see config.key_codes() and bridge.py.
 
     A user on unknown hardware should be able to find out in ten seconds rather
     than guessing, so this module answers one question - "has this panel ever
@@ -120,7 +125,7 @@ _KEY_LINE = re.compile(r'^KeyMatrix_(\d{1,2})_(\d{1,2})\s*=\s*(\S+)\s*$')
 # three built-in key bindings at names no driver produces, so that everything
 # a button does is decided here and can be changed from the settings page
 # without restarting anything.
-ACTIONS = ('next', 'previous', 'menu', 'back', 'screen', 'backlight', 'none')
+ACTIONS = ('next', 'previous', 'menu', 'back', 'pause', 'screen', 'backlight', 'none')
 
 # Behind an empty key grid, the map this plugin was written against: the panel
 # is printed with a down arrow, ESC, an up arrow and ENTER, in that order.
@@ -399,9 +404,21 @@ def report(options=None, log=LOG, record=RECORD):
         },
     }
 
+    try:
+        _, panel = config.match_panel()
+    except Exception:
+        panel = {}
+    codes = config.key_codes(options, panel)
+    answer['direct'] = bool(codes) and bool(options.get('keypad'))
+    answer['codes'] = dict((name, '%02X' % code) for code, name in sorted(codes.items()))
+
     if not options.get('keypad'):
         answer['note'] = ('The keypad is switched off in the settings, so nothing is '
                           'polling the keys and nothing will be reported.')
+    elif answer['direct'] and not keys:
+        answer['note'] = ('This panel sends a byte of its own accord when a key goes down, '
+                          'and the screen client reads the port itself. No press has '
+                          'reached it yet: press one and look again.')
     elif not keys:
         answer['note'] = ('No key has reported yet. The keys are polled rather than '
                           'volunteered, so press one and look again - and if nothing ever '

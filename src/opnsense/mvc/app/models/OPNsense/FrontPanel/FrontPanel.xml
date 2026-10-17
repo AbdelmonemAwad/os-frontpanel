@@ -1,6 +1,6 @@
 <model>
     <mount>//OPNsense/FrontPanel</mount>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <description>Front panel</description>
     <items>
         <!--
@@ -214,6 +214,81 @@
                 <Mask>/^[a-z][a-z0-9_.]*[0-9]$/</Mask>
                 <ValidationMessage>Enter the name the kernel gives the port, such as igb0.</ValidationMessage>
             </throughput_if>
+            <!--
+                Whether the panel's menu offers Reboot and Shutdown. On, as on the vendor's own
+                firmware for this hardware, where the menu reaches both behind a two-step
+                confirmation - a stray press cannot reach either. Off removes the entries; it
+                does not hide them behind a password the panel has no way to ask for.
+            -->
+            <panel_power type="BooleanField">
+                <Required>Y</Required>
+                <Default>1</Default>
+            </panel_power>
         </general>
+        <!--
+            The buttons: one row per key, and what pressing it does.
+
+            The name is what the key is called everywhere else - by LCDd for a panel the driver
+            reads, by the plugin for a panel whose bridge sends a byte of its own accord - so a
+            row is matched to a press by name. `code` is that byte, written as two hexadecimal
+            digits, and is only meaningful on a panel the plugin reads itself; the appliance
+            table carries the measured codes for the panels it knows, the page can learn them
+            from the panel, and a row that names one overrides the table.
+
+            An empty grid is not an unconfigured panel: the four defaults in keys.py apply behind
+            it, so the buttons do something sensible before anybody opens this page.
+        -->
+        <buttons>
+            <button type="ArrayField">
+                <enabled type="BooleanField">
+                    <Required>Y</Required>
+                    <Default>1</Default>
+                </enabled>
+                <key type="TextField">
+                    <Required>Y</Required>
+                    <Mask>/^[A-Za-z0-9_]{1,32}$/</Mask>
+                    <ValidationMessage>A key name is letters, digits and underscores, such as Enter.</ValidationMessage>
+                    <Constraints>
+                        <check001>
+                            <ValidationMessage>Each key can have only one row.</ValidationMessage>
+                            <type>UniqueConstraint</type>
+                        </check001>
+                    </Constraints>
+                </key>
+                <label type="TextField">
+                    <Mask>/^[^"\\&lt;>]{0,32}$/u</Mask>
+                    <ValidationMessage>Use up to 32 characters, without quotes, backslashes or angle brackets.</ValidationMessage>
+                </label>
+                <code type="TextField">
+                    <Mask>/^[0-9A-Fa-f]{2}$/</Mask>
+                    <ValidationMessage>Write the byte as two hexadecimal digits, such as 41.</ValidationMessage>
+                </code>
+                <action type="OptionField">
+                    <Required>Y</Required>
+                    <Default>next</Default>
+                    <OptionValues>
+                        <next>Next screen</next>
+                        <previous>Previous screen</previous>
+                        <menu>Open the menu</menu>
+                        <back>Back to the rotation</back>
+                        <pause>Hold or resume the rotation</pause>
+                        <screen>Show one screen</screen>
+                        <backlight>Backlight on or off</backlight>
+                        <none>Nothing</none>
+                    </OptionValues>
+                </action>
+                <target type="OptionField">
+                    <OptionValues>
+                        <identity>Identity</identity>
+                        <wan>WAN</wan>
+                        <throughput>Throughput</throughput>
+                        <system>System</system>
+                        <temperature>Temperature</temperature>
+                        <ports>Ports</ports>
+                        <message>Message</message>
+                    </OptionValues>
+                </target>
+            </button>
+        </buttons>
     </items>
 </model>
