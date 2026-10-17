@@ -2130,3 +2130,5 @@
 </div>
 
 {{ partial("layout_partials/base_dialog", ['fields': buttonForm, 'id': formGridButton['edit_dialog_id'], 'label': lang._('Edit button')]) }}
+
+{{ partial("OPNsense/FrontPanel/credit") }}

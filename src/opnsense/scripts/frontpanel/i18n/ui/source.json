@@ -217,5 +217,7 @@
  "The ruler is on the panel. Click the character you see in its top-left corner - or move the text with the arrow keys on the panel until 0 is there, then press Enter.",
  "The text could not be aligned.",
  "The text is aligned.",
- "Unknown alignment request."
+ "Unknown alignment request.",
+ "BSD-2-Clause licence",
+ "An independent project, not affiliated with Deciso B.V."
 ]
