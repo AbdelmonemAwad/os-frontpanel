@@ -28,7 +28,7 @@ jobs:
     name: syntax
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Python
         run: |
@@ -91,7 +91,7 @@ jobs:
     name: nothing private
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: No real addresses, hardware identifiers or credentials
         run: python3 tools/check-private-data.py .
 
@@ -106,7 +106,7 @@ jobs:
     name: translations
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # This job used to pass by doing nothing: both steps below began with "if the tool is
       # not in this repository, print a line and exit 0", and neither tool was here - so the
