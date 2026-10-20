@@ -166,16 +166,27 @@ This is the single most valuable piece of evidence, and it is worth an hour of l
 turns the question from "which of 36 drivers?" into "which settings?".
 
 Appliance vendors overwhelmingly did not write panel code either. On the reference machine, Sophos's
-own firmware drove this panel with **LCDproc's own daemon on `/dev/ttyS1`** (reported — read from
-descriptions of the original firmware, not verified here). The moment that was known, the shape of
-the answer was known: the panel speaks something LCDproc already supports, on the second serial port,
-and everything left is which connection type and what speed.
+own firmware drove this panel ~~with **LCDproc's own daemon on `/dev/ttyS1`** (reported — read from
+descriptions of the original firmware, not verified here)~~ from **`/dev/ttyS1`**, with **a daemon of
+its own that is not LCDproc** - verified on an XGS 3300 under SFOS 22.0.2 on 2026-09-28
+([#4](https://github.com/AbdelmonemAwad/os-frontpanel/issues/4)). The port was right: the serial
+driver's table showed transmit climbing on port 1 and receive at zero while the daemon painted the
+display. The daemon was not LCDproc. It is named `lcdd`, but its package says `sfos/lcdd`,
+`Sophos-Proprietary`, with six back ends compiled in and chosen by `LCD_DRIVER`; this model runs
+`GIFAR`. ~~The moment that was known, the shape of the answer was known: the panel speaks something
+LCDproc already supports, on the second serial port, and everything left is which connection type
+and what speed.~~ The port was the useful part. The protocol had to be measured on the glass: the
+XGS 3300's panel takes printable bytes into a ring of 40 cells and carries out no command, so the
+plugin drives it itself (`"direct": true`, `src/opnsense/scripts/frontpanel/bridge.py`), as section 5
+describes.
 
 Where that evidence lives, roughly in order of how much it is worth:
 
 - **The original firmware, if the disk still exists.** Mount it read-only and look for LCDproc's own
   files: `LCDd.conf`, `lcdproc.conf`, an rc script named `LCDd`, a binary called `lcdd` or `LCDd`. A
-  vendor's `LCDd.conf` is the entry you are trying to write, already written.
+  vendor's `LCDd.conf` is the entry you are trying to write, already written. **A binary named `lcdd`
+  is not evidence of LCDproc**, though: Sophos's own proprietary panel daemon has exactly that name.
+  Read the package metadata beside the file before trusting the name.
 - **The vendor's GPL source release.** LCDproc is GPLv2, so a vendor shipping it owes you the source
   and usually their patches with it. Search the vendor's open-source page for `lcdproc`.
 - **Teardowns, forum threads and other people's notes** for the same model. Treat these as reported,
