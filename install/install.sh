@@ -46,7 +46,10 @@ chmod 755 /usr/local/etc/rc.d/frontpanel
 # catalogues; /etc/rc runs it as a program, so it needs the bit like the rc script above
 chmod 755 /usr/local/etc/rc.syshook.d/start/63-frontpanel
 chmod 644 /usr/local/etc/newsyslog.conf.d/frontpanel
-chmod 644 /usr/local/etc/cron.d/frontpanel-update
+# No daily self-update since 2026-10-20: a release is installed from XGS: Updates
+# (its Plugins tab, in os-xgs-npu) or by hand with self-update.py. An older
+# install's cron entry goes.
+rm -f /usr/local/etc/cron.d/frontpanel-update
 chmod 644 /usr/local/opnsense/service/conf/actions.d/actions_frontpanel.conf
 
 # Where the generated LCDd configuration will land. The directory is made now, empty, so
@@ -127,7 +130,7 @@ if [ -x /usr/local/opnsense/scripts/frontpanel/merge_ui_translations.py ]; then
 fi
 configctl webgui restart > /dev/null 2>&1 || true
 
-# What this install is, for the daily self-update: the commit, from a git checkout, or from the
+# What this install is, for the self-update: the commit, from a git checkout, or from the
 # .source-commit stamp that an xgs-image-builder image or the self-update leaves in the tree.
 # Without either it is recorded as unknown, and the self-update takes the latest release once.
 REV=; RDATE=; RSRC=unknown

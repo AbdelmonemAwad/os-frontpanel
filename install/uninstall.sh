@@ -18,7 +18,8 @@ fi
 # plugins.inc.d and calls its hooks at boot, and frontpanel_services() builds the plugin's
 # model: left behind without the classes below, it is a fatal error that stops rc.bootup before
 # the network - which is what it did on an XGS 136 (issue 11).
-# the daily self-update first, so that it cannot reinstall half way through this
+# the cron entry of the daily self-update an install before 2026-10-20 had, so that it cannot
+# reinstall half way through this
 rm -f /usr/local/etc/cron.d/frontpanel-update
 rm -rf /usr/local/share/os-frontpanel
 rm -f /usr/local/etc/inc/plugins.inc.d/frontpanel.inc
