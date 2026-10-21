@@ -33,6 +33,11 @@ rotate on a timer whether the keys work or not.
 Plugin Changelog
 ================
 
+1.0.1
+
+* The page's Arabic is in opnsense-arabic's catalogue; this plugin merges
+  nothing into the GUI's catalogues any more
+
 1.0
 
 * Initial release
