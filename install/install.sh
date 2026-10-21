@@ -42,9 +42,6 @@ cp -R "${HERE}/src/" /usr/local/
 find /usr/local/opnsense/scripts/frontpanel -type f -name '*.py' -exec chmod 755 {} +
 find /usr/local/opnsense/scripts/frontpanel -type f ! -name '*.py' -exec chmod 644 {} +
 chmod 755 /usr/local/etc/rc.d/frontpanel
-# the boot hook that puts the GUI strings back after a core update has replaced the
-# catalogues; /etc/rc runs it as a program, so it needs the bit like the rc script above
-chmod 755 /usr/local/etc/rc.syshook.d/start/63-frontpanel
 chmod 644 /usr/local/etc/newsyslog.conf.d/frontpanel
 # No daily self-update since 2026-10-20: a release is installed from XGS: Updates
 # (its Plugins tab, in os-xgs-npu) or by hand with self-update.py. An older
@@ -122,12 +119,14 @@ PHPTMP=$(php -r "echo (include '${CONFIGPHP}')->application->tempDir;" 2>/dev/nu
 PHPTMP=${PHPTMP:-/var/lib/php/tmp}
 rm -f "${PHPTMP}/opnsense_menu_cache.xml" "${PHPTMP}/opnsense_acl_cache.json"
 
-# GUI strings for every installed language, then reload php so the new catalogs are used.
-# Guarded rather than assumed: a build of this plugin that ships no catalogue of its own is a
-# perfectly good plugin, and the install should not stop because there was nothing to merge.
-if [ -x /usr/local/opnsense/scripts/frontpanel/merge_ui_translations.py ]; then
-    echo "translated strings added: $(/usr/local/opnsense/scripts/frontpanel/merge_ui_translations.py)"
-fi
+# The page's Arabic is in opnsense-arabic's catalogue since 2026-10-22, so this plugin merges
+# nothing into it any more. What an earlier install put here for that goes: the copy of the
+# Arabic, its merge, the boot hook and the pkg trigger that ran it, and the merge's record.
+rm -f /usr/local/opnsense/scripts/frontpanel/i18n/ui/ar_SA.json \
+    /usr/local/opnsense/scripts/frontpanel/merge_ui_translations.py \
+    /usr/local/etc/rc.syshook.d/start/63-frontpanel \
+    /usr/local/share/pkg/triggers/os-frontpanel.ucl \
+    /var/db/frontpanel/i18n-owned.json
 configctl webgui restart > /dev/null 2>&1 || true
 
 # What this install is, for the self-update: the commit, from a git checkout, or from the

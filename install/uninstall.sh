@@ -24,6 +24,7 @@ rm -f /usr/local/etc/cron.d/frontpanel-update
 rm -rf /usr/local/share/os-frontpanel
 rm -f /usr/local/etc/inc/plugins.inc.d/frontpanel.inc
 rm -f /usr/local/etc/rc.d/frontpanel
+# A version before 2026-10-22 merged its own Arabic from a boot hook and a pkg trigger.
 rm -f /usr/local/share/pkg/triggers/os-frontpanel.ucl
 rm -f /usr/local/etc/rc.syshook.d/start/63-frontpanel
 rm -f /usr/local/etc/newsyslog.conf.d/frontpanel

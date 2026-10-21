@@ -110,8 +110,14 @@ def main():
     catalogue = os.path.join(HERE, 'src', 'opnsense', 'scripts', 'frontpanel', 'i18n', 'ui')
     with open(os.path.join(catalogue, 'source.json'), encoding='utf-8') as handle:
         source = set(json.load(handle))
-    with open(os.path.join(catalogue, 'ar_SA.json'), encoding='utf-8') as handle:
-        arabic = json.load(handle)
+    # the Arabic is in opnsense-arabic's catalogue since 2026-10-22
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import arabic_catalogue
+    try:
+        arabic = arabic_catalogue.catalogue()
+    except (OSError, ValueError) as exc:
+        print("opnsense-arabic's catalogue cannot be read: %s" % exc)
+        return 1
 
     absent = sorted(used - source)
     stale = sorted(source - used)
@@ -119,7 +125,7 @@ def main():
 
     print('page: %d calls, %d distinct | form: %d | model: %d | asked for: %d'
           % (calls, len(page), len(form), len(model), len(used)))
-    print('catalogued: %d | translated: %d' % (len(source), len(arabic)))
+    print('catalogued: %d | translated in opnsense-arabic: %d' % (len(source), len(source) - len(missing)))
 
     problems = 0
 
@@ -134,7 +140,7 @@ def main():
         print('   + ' + key[:100])
     problems += len(absent)
 
-    print('catalogued but untranslated: %d' % len(missing))
+    print('catalogued but with no Arabic in opnsense-arabic: %d' % len(missing))
     for key in missing:
         print('   ? ' + key[:100])
     problems += len(missing)

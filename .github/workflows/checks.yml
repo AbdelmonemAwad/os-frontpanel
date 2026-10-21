@@ -120,11 +120,11 @@ jobs:
       # catalogue held. Their absence is a failure now, not a reason to skip.
       - name: The pieces this job checks are present
         run: |
+          # The Arabic is in opnsense-arabic's catalogue since 2026-10-22, read by the two tools.
           for f in tools/gen-data-strings.py \
                    tools/check-strings.py \
-                   src/opnsense/scripts/frontpanel/merge_ui_translations.py \
-                   src/opnsense/scripts/frontpanel/i18n/ui/source.json \
-                   src/opnsense/scripts/frontpanel/i18n/ui/ar_SA.json; do
+                   tools/arabic_catalogue.py \
+                   src/opnsense/scripts/frontpanel/i18n/ui/source.json; do
             [ -f "$f" ] || { echo "missing: $f"; exit 1; }
             echo "ok $f"
           done
