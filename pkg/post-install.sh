@@ -82,22 +82,9 @@ if [ -f /usr/local/etc/rc.configure_plugins ]; then
 	/usr/local/etc/rc.configure_plugins POST_INSTALL
 fi
 
-# GUI strings for every installed language. Guarded rather than assumed: a build of this
-# plugin that ships no catalogue of its own is a perfectly good plugin, and the install
-# should not complain because there was nothing to merge. The webgui is restarted only
-# when there was something to add, because a restart takes away every logged-in session's
-# php worker.
-if [ -x /usr/local/opnsense/scripts/frontpanel/merge_ui_translations.py ]; then
-	ADDED=$(/usr/local/opnsense/scripts/frontpanel/merge_ui_translations.py 2> /dev/null) || ADDED=
-	echo "translated strings added: ${ADDED:-0}"
-	if [ -n "${ADDED}" ] && [ "${ADDED}" != "0" ]; then
-		# absolute, because a pkg script does not necessarily inherit a PATH with
-		# /usr/local/sbin in it - which is why os-vnstat's own post-install calls
-		# /usr/local/sbin/configctl by its full path too
-		[ -f /usr/local/sbin/configctl ] &&
-		    /usr/local/sbin/configctl webgui restart > /dev/null 2>&1 || true
-	fi
-fi
+# The page's Arabic is in opnsense-arabic's catalogue since 2026-10-22: nothing is merged
+# from here, and the merge's record from an earlier version goes.
+rm -f /var/db/frontpanel/i18n-owned.json
 
 echo "Front Panel installed: the page is at System > Front Panel"
 

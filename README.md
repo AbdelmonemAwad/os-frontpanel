@@ -463,7 +463,11 @@ not be updated either. Build a new package from a newer tag and `pkg add -f` it.
 
 The GUI on the reference machine is used in **Arabic, right to left**. Nothing on the settings page
 is positioned with a hard-coded left offset, and every visible string goes through the framework's
-translation function, so the existing translation pipeline carries this page like any other.
+translation function, so the existing translation pipeline carries this page like any other. Its
+Arabic is in [opnsense-arabic](https://github.com/AbdelmonemAwad/opnsense-arabic)'s catalogue with
+the rest of the GUI since 2026-10-22; the list of the page's strings stays here, in
+`src/opnsense/scripts/frontpanel/i18n/ui/source.json`, and `tools/check-strings.py` fails a string
+that has no Arabic there.
 
 The panel itself is a different matter, and it is better said here than discovered at the rack: a
 16×2 character LCD has no Arabic in its character generator. LCDproc's default map translates

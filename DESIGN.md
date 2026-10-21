@@ -197,8 +197,6 @@ optional.
 Makefile, pkg-descr, README.md, DESIGN.md
 install/{install.sh,uninstall.sh,enable.sh}
 src/etc/rc.d/frontpanel                      the service
-src/etc/rc.syshook.d/start/63-frontpanel     the GUI strings merged again at boot
-src/share/pkg/triggers/os-frontpanel.ucl     the same, the moment an update writes a catalog
 src/opnsense/service/conf/actions.d/actions_frontpanel.conf
 src/opnsense/scripts/frontpanel/{frontpanel.py,screens.py,config.py,panels.json,keys.py}
 src/opnsense/mvc/app/models/OPNsense/FrontPanel/{FrontPanel.xml,FrontPanel.php,Menu/Menu.xml,ACL/ACL.xml}
