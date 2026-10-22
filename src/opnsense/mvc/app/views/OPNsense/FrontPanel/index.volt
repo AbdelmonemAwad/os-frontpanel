@@ -561,7 +561,7 @@
                 .append(card(shown ? 'ok' : (shown === 0 ? 'warn' : ''), 'fa-th-list', "{{ lang._('Screens') }}",
                     shown === null ? '…' : String(shown), "{{ lang._('in the rotation, with something to show') }}"))
                 .append(card(keypad ? 'ok' : '', 'fa-keyboard-o', "{{ lang._('Keys') }}",
-                    keypad ? "{{ lang._('read') }}" : "{{ lang._('not read') }}", "{{ lang._('the buttons beside the screen') }}"));
+                    keypad ? "{{ lang._('being read') }}" : "{{ lang._('not being read') }}", "{{ lang._('the buttons beside the screen') }}"));
         }
 
         function draw_service_state(status) {
