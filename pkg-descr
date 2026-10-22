@@ -33,6 +33,11 @@ rotate on a timer whether the keys work or not.
 Plugin Changelog
 ================
 
+1.0.2
+
+* The keys card says "being read" or "not being read", strings of its own,
+  so its Arabic in opnsense-arabic's catalogue is exact
+
 1.0.1
 
 * The page's Arabic is in opnsense-arabic's catalogue; this plugin merges
