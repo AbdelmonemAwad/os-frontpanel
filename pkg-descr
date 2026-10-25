@@ -33,6 +33,14 @@ rotate on a timer whether the keys work or not.
 Plugin Changelog
 ================
 
+1.0.3
+
+* The page goes in the XGS section when os-xgs-npu is installed - among
+  the appliance's pages, in OPNsense's order - and under System when it is
+  not; os-xgs-npu moves it when it is installed or removed
+* The archive an appliance downloads carries what it reads: the
+  documentation, the workflows and the repository's tools left out
+
 1.0.2
 
 * The keys card says "being read" or "not being read", strings of its own,
