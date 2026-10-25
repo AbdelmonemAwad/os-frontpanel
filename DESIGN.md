@@ -35,11 +35,11 @@ Linux name for this exact port (**R**). The panel never spoke a proprietary prot
 So this plugin ships: a configuration generator, a service, a screen client, a settings page, and
 nothing that talks to a serial port.
 
-## 2. What the owner asked for, in order
+## 2. What it is for, in order
 
 1. Use the screen and the buttons built into the appliance.
 2. Support the built-in displays of **other** appliances too.
-3. **Every speed is adjustable from the settings page** — asked for explicitly after watching the
+3. **Every speed is adjustable from the settings page** — found missing after watching the
    first version run, and the reason the whole `[speed]` section below exists.
 
 ## 3. Hardware support, honestly
@@ -117,7 +117,7 @@ happened. People meeting this swap drivers for hours. It belongs in `docs/panels
 
 ## 5. Settings
 
-The `[speed]` group exists because the owner asked for it by name.
+The `[speed]` group exists because a pace that is right on one appliance is unreadable on another.
 
 | Setting | Default | What it does |
 |---|---|---|
