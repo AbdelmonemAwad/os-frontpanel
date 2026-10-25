@@ -199,12 +199,14 @@ install/{install.sh,uninstall.sh,enable.sh}
 src/etc/rc.d/frontpanel                      the service
 src/opnsense/service/conf/actions.d/actions_frontpanel.conf
 src/opnsense/scripts/frontpanel/{frontpanel.py,screens.py,config.py,panels.json,keys.py}
-src/opnsense/mvc/app/models/OPNsense/FrontPanel/{FrontPanel.xml,FrontPanel.php,Menu/Menu.xml,ACL/ACL.xml}
+src/opnsense/scripts/frontpanel/{place-menu.sh,menu/own.xml,menu/xgs.xml}   the menu place, written at install
+src/opnsense/mvc/app/models/OPNsense/FrontPanel/{FrontPanel.xml,FrontPanel.php,ACL/ACL.xml}
 src/opnsense/mvc/app/controllers/OPNsense/FrontPanel/{IndexController.php,forms/general.xml,Api/*.php}
 src/opnsense/mvc/app/views/OPNsense/FrontPanel/index.volt
 ```
 
-Menu: **System → Front Panel** (it is about the appliance, not about the network).
+Menu: **System → Front Panel** (it is about the appliance, not about the network) -
+**XGS → Front Panel** when os-xgs-npu is installed.
 
 ## 8. What this plugin does not do
 

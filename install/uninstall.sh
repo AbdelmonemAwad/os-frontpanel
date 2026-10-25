@@ -30,6 +30,9 @@ rm -f /usr/local/etc/rc.syshook.d/start/63-frontpanel
 rm -f /usr/local/etc/newsyslog.conf.d/frontpanel
 rm -f /usr/local/opnsense/service/conf/actions.d/actions_frontpanel.conf
 rm -rf /usr/local/opnsense/scripts/frontpanel
+# the menu file place-menu.sh wrote, which no list of the package's files names
+rm -f /usr/local/opnsense/mvc/app/models/OPNsense/FrontPanel/Menu/Menu.xml
+rmdir /usr/local/opnsense/mvc/app/models/OPNsense/FrontPanel/Menu 2> /dev/null || true
 rm -rf /usr/local/opnsense/mvc/app/models/OPNsense/FrontPanel
 rm -rf /usr/local/opnsense/mvc/app/controllers/OPNsense/FrontPanel
 rm -rf /usr/local/opnsense/mvc/app/views/OPNsense/FrontPanel

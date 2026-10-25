@@ -93,6 +93,11 @@ done
 # sh -n parses it without running a line of it.
 sh -n /usr/local/etc/rc.d/frontpanel || { echo "the rc script does not parse"; exit 1; }
 
+# Where the page goes in the menu: XGS when os-xgs-npu is installed, System when it is not.
+# OPNsense's menu file takes no condition, so place-menu.sh writes it from menu/ and says which.
+chmod 755 /usr/local/opnsense/scripts/frontpanel/place-menu.sh
+MENUPLACE=$(/usr/local/opnsense/scripts/frontpanel/place-menu.sh)
+
 # The switch /etc/rc consults at boot. It is written once, off, and never written again by
 # this script: whether this machine brings the panel up by itself is a decision somebody made,
 # and an update must not undo it. rc.subr's own enable and disable edit this same file in
@@ -145,7 +150,11 @@ install -d -m 0755 /usr/local/share/os-frontpanel
 printf '{"commit": "%s", "date": "%s", "source": "%s", "installed_at": %s}\n' \
     "${REV}" "${RDATE}" "${RSRC}" "$(date +%s)" > /usr/local/share/os-frontpanel/installed.json
 
-echo "Front Panel installed: the page is at System > Front Panel"
+if [ "${MENUPLACE}" = xgs ]; then
+    echo "Front Panel installed: XGS > Front Panel"
+else
+    echo "Front Panel installed: System > Front Panel"
+fi
 
 # An update leaves the running service running the code it started with - python has already
 # read the old files into memory - and this script will not restart it uninvited, because a

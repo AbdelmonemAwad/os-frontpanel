@@ -77,6 +77,15 @@ if [ -x /usr/local/opnsense/scripts/firmware/register.php ]; then
 	/usr/local/opnsense/scripts/firmware/register.php install os-frontpanel > /dev/null 2>&1 || true
 fi
 
+# Where the page goes in the menu: XGS when os-xgs-npu is installed, System when it is not.
+# OPNsense's menu file takes no condition, so it is not one of the package's files: place-menu.sh
+# writes it, before the reload below drops the menu cache.
+MENUPLACE=
+if [ -x /usr/local/opnsense/scripts/frontpanel/place-menu.sh ]; then
+	MENUPLACE=$(/usr/local/opnsense/scripts/frontpanel/place-menu.sh) ||
+	    echo "the menu entry could not be written: run /usr/local/opnsense/scripts/frontpanel/place-menu.sh"
+fi
+
 if [ -f /usr/local/etc/rc.configure_plugins ]; then
 	echo "Reloading plugin configuration"
 	/usr/local/etc/rc.configure_plugins POST_INSTALL
@@ -86,7 +95,11 @@ fi
 # from here, and the merge's record from an earlier version goes.
 rm -f /var/db/frontpanel/i18n-owned.json
 
-echo "Front Panel installed: the page is at System > Front Panel"
+if [ "${MENUPLACE}" = xgs ]; then
+	echo "Front Panel installed: the page is at XGS > Front Panel"
+else
+	echo "Front Panel installed: the page is at System > Front Panel"
+fi
 
 # An upgrade leaves the running service running the code it started with - python has
 # already read the old files into memory - and this script will not restart it uninvited,
