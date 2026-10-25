@@ -391,7 +391,8 @@ Then, as root:
 pkg add /tmp/os-frontpanel-*.pkg
 ```
 
-Then open **System → Front Panel**. It is under System rather than Interfaces because
+Then open **System → Front Panel** - **XGS → Front Panel** when os-xgs-npu is installed.
+It is under System rather than Interfaces because
 this is about the appliance itself and not about the network it serves.
 
 **Nothing is on the screen yet, and nothing will be until you turn it on.** Look at
