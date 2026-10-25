@@ -17,7 +17,7 @@
 
             That is also why the five speeds are not a group here. They are a group where a group
             can be seen - their own section, with its own heading, on the settings page - which is
-            what the owner asked for after watching the first version run.
+            what watching the first version run showed was missing.
         -->
         <general>
             <enabled type="BooleanField">
@@ -124,7 +124,7 @@
             </keypad>
 
             <!--
-                The speeds. The owner asked for these after watching the first version run, and
+                The speeds. Watching the first version run showed they must be settable, and
                 each one is a line that ends up in LCDd.conf. Every bound below is the one
                 config.py clamps to, so that the page refuses what the generator would otherwise
                 quietly round off - a setting that is accepted and then ignored is worse than one
