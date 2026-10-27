@@ -168,7 +168,7 @@ turns the question from "which of 36 drivers?" into "which settings?".
 Appliance vendors overwhelmingly did not write panel code either. On the reference machine, Sophos's
 own firmware drove this panel ~~with **LCDproc's own daemon on `/dev/ttyS1`** (reported — read from
 descriptions of the original firmware, not verified here)~~ from **`/dev/ttyS1`**, with **a daemon of
-its own that is not LCDproc** - verified on an XGS 3300 under SFOS 22.0.2 on 2026-09-28
+its own that is not LCDproc** - verified on an XGS 3300 under vendor build 22.0.2 on 2026-09-28
 ([#4](https://github.com/AbdelmonemAwad/os-frontpanel/issues/4)). The port was right: the serial
 driver's table showed transmit climbing on port 1 and receive at zero while the daemon painted the
 display. The daemon was not LCDproc. It is named `lcdd`, but its package says `sfos/lcdd`,
