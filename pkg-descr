@@ -33,6 +33,12 @@ rotate on a timer whether the keys work or not.
 Plugin Changelog
 ================
 
+1.0.4
+
+* The page's entry in the XGS section of the menu carries an icon, as
+  every page of that section does now, and its entry under System the
+  same icon (#40)
+
 1.0.3
 
 * The page goes in the XGS section when os-xgs-npu is installed - among
