@@ -3,7 +3,7 @@
 # Copyright (c) 2026 Abdelmonem Awad <eg2@live.com>
 #
 PLUGIN_NAME=		frontpanel
-PLUGIN_VERSION=		1.0.3
+PLUGIN_VERSION=		1.0.4
 PLUGIN_COMMENT=		Firewall information on the appliance front panel LCD
 PLUGIN_MAINTAINER=	eg2@live.com
 PLUGIN_DEPENDS=		lcdproc
