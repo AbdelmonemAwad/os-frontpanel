@@ -12,6 +12,6 @@
         place-menu.sh chooses between this file and own.xml.
     -->
     <XGS VisibleName="XGS" cssClass="fa fa-microchip fa-fw" order="35">
-        <FrontPanel order="52" VisibleName="Front Panel" url="/ui/frontpanel"/>
+        <FrontPanel order="52" VisibleName="Front Panel" cssClass="fa fa-display fa-fw" url="/ui/frontpanel"/>
     </XGS>
 </menu>

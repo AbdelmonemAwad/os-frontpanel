@@ -12,6 +12,6 @@
         number invented here would only push Front Panel somewhere no one expects it.
     -->
     <System>
-        <FrontPanel VisibleName="Front Panel" cssClass="fa fa-television fa-fw" url="/ui/frontpanel"/>
+        <FrontPanel VisibleName="Front Panel" cssClass="fa fa-display fa-fw" url="/ui/frontpanel"/>
     </System>
 </menu>
