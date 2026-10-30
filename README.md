@@ -1,3 +1,21 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme/banner-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/images/readme/banner-light.svg">
+  <img src="docs/images/readme/banner-light.svg" alt="os-frontpanel - The firewall’s own information on the LCD in its front" width="100%">
+</picture>
+
+<p align="center">
+  <a href="https://github.com/AbdelmonemAwad/os-frontpanel/releases/latest"><img alt="the newest release" src="https://img.shields.io/github/v/release/AbdelmonemAwad/os-frontpanel?sort=semver&amp;style=flat-square&amp;label=release&amp;color=8250df"></a>
+  <a href="https://github.com/AbdelmonemAwad/os-frontpanel/actions/workflows/checks.yml"><img alt="checks on main" src="https://img.shields.io/github/actions/workflow/status/AbdelmonemAwad/os-frontpanel/checks.yml?branch=main&amp;style=flat-square&amp;label=checks"></a>
+  <a href="LICENSE"><img alt="licence: BSD-2-Clause" src="https://img.shields.io/badge/licence-BSD--2--Clause-blue.svg?style=flat-square"></a>
+  <a href="#front-panel-for-opnsense"><img alt="OPNsense 26.7" src="https://img.shields.io/badge/OPNsense-26.7-d94f00.svg?style=flat-square"></a>
+  <a href="https://github.com/AbdelmonemAwad/opnsense-arabic"><img alt="the page in English and in Arabic" src="https://img.shields.io/badge/GUI-English%20%C2%B7%20Arabic-2da44e.svg?style=flat-square"></a>
+  <a href="https://github.com/AbdelmonemAwad/os-xgs-npu"><img alt="part of os-xgs-npu" src="https://img.shields.io/badge/part%20of-os--xgs--npu-9a6700.svg?style=flat-square"></a>
+  <br>
+  <a href="#the-keys"><img alt="on an XG 330 rev 2 all four keys report: each pressed three times, each press in LCDd&#x27;s log, nothing lost (2026-09-21)" src="https://img.shields.io/badge/XG%20330%20keys-4%20of%204%20report%2C%20nothing%20lost-brightgreen.svg?style=flat-square"></a>
+  <a href="#the-buttons-and-the-menu"><img alt="on an XGS 3300 each of the four keys sends one letter when pressed, measured on 2026-10-17 with each key pressed in turn" src="https://img.shields.io/badge/XGS%203300%20keys-4%20of%204%20codes%20measured-brightgreen.svg?style=flat-square"></a>
+</p>
+
 # Front Panel for OPNsense
 
 A plugin that puts the firewall's own information on the **LCD built into the front of the
@@ -27,6 +45,8 @@ panel is 16×2 characters with four keys, on the second of its two serial ports.
 that says **measured here** was measured on that machine; everything else is marked where it
 matters. The hardware table ships with **exactly one confirmed entry**, and
 [Other appliances](#other-appliances) says what that means for yours.
+
+<p align="center"><b>Contents:</b> <a href="#the-screen-that-said-sophos-for-months">The screen that said SOPHOS for months</a> &middot; <a href="#what-you-need">What you need</a> &middot; <a href="#nothing-runs-until-you-turn-it-on">Nothing runs until you turn it on</a> &middot; <a href="#the-page">The page</a> &middot; <a href="#settings-and-the-speeds">Settings, and the speeds</a> &middot; <a href="#screens">Screens</a> &middot; <a href="#the-keys">The keys</a> &middot; <a href="#the-buttons-and-the-menu">The buttons and the menu</a> &middot; <a href="#other-appliances">Other appliances</a> &middot; <a href="#installation">Installation</a> &middot; <a href="#how-it-works">How it works</a> &middot; <a href="#the-gui-in-arabic">The GUI in Arabic</a> &middot; <a href="#what-it-does-not-do">What it does not do</a> &middot; <a href="#in-the-xgs-image">In the XGS image</a> &middot; <a href="#updates">Updates</a> &middot; <a href="#license">License</a></p>
 
 ## The screen that said SOPHOS for months
 
