@@ -349,7 +349,14 @@ The table this plugin ships, `panels.json`, has **two confirmed entries**: the S
 above — its display watched and photographed, its four keys measured one at a time, and every word of
 that written into the entry so the page can show it to whoever is about to press Apply — and the
 Sophos XGS 3300, the same panel family at 9600 baud rather than 2400, its display verified and its
-keys not yet measured, which the entry says.
+~~keys not yet measured, which the entry says~~ four keys measured on 2026-10-17, which the entry says.
+
+Since 1.0.5 (2026-10-30) a third entry offers the XGS 3300's settings to the other models built on
+its board, AMDA0202 - the XGS 2100, 2300 and 3100 - matched on the assembly number the board's
+serial carries rather than on model strings nobody here has read, and marked unconfirmed. Until then
+the entry had matched the XGS 3300 alone, and an XGS 3100 fell to the general one, whose 2400 baud
+garbles this panel ([os-xgs-npu#901](https://github.com/AbdelmonemAwad/os-xgs-npu/issues/901)); 9600
+has not been confirmed on that model's panel yet.
 
 Everything else is a choice the page offers you, not hardware somebody has tested. The settings page
 lists the 36 drivers the `lcdproc` package installs, and "support for other appliances" means exactly

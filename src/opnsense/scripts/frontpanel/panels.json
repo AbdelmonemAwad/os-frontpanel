@@ -105,6 +105,58 @@
         "The panel is not drawn by LCDd either. Its bridge carries out no positioning command at all - clear, home and the line addresses are swallowed and do nothing - and writes every character at a cursor that runs round all forty cells, the first row and then the second. LCDd rewrites only what changed, so each update moved the whole picture by however many characters it wrote. The plugin draws this panel itself, always forty characters at once, which leaves the cursor where it was; the owner lines the text up once from the Buttons tab."
       ]
     },
+    "sophos-xgs-amda0202": {
+      "display": "Sophos XGS front panel (the XGS 2100, 2300 and 3100: the XGS 3300's board, AMDA0202)",
+      "comment": [
+        "The XGS 3300's entry above, offered to the other models built on its board - AMDA0202, the assembly",
+        "number SMBIOS type 2 carries in its serial: the 2100 and 2300 (-0001 and -0002, the two assemblies",
+        "the vendor's 1US startup script in its GPL sources names) and the 3100 (-0003, its owner's support",
+        "bundle, issue 901). Matched on the board, not on model strings nobody here has read, and offered",
+        "unconfirmed: the panel is confirmed on the 3300 alone, which still matches the entry above on its",
+        "own strings first."
+      ],
+      "match": {
+        "maker": "^Sophos$",
+        "product": "^XGS$",
+        "serial": "AMDA0202-"
+      },
+      "driver": "hd44780",
+      "options": {
+        "ConnectionType": "ezio",
+        "Device": "/dev/cuau1",
+        "Size": "20x2",
+        "Keypad": "yes",
+        "Speed": "9600"
+      },
+      "direct": true,
+      "keybytes": {
+        "A": "Enter",
+        "B": "Escape",
+        "C": "Up",
+        "D": "Down"
+      },
+      "keylabels": {
+        "Enter": "Enter",
+        "Escape": "Esc",
+        "Up": "Up arrow",
+        "Down": "Down arrow"
+      },
+      "speed": {
+        "bus_delay": 2,
+        "refresh_seconds": 4,
+        "heartbeat": false
+      },
+      "confirmed": "",
+      "notes": [
+        "Speed=9600 is required. ConnectionType=ezio on its own fixes the line at 2400, which is right for the XG 330 rev 2 and wrong here: at 2400 this panel draws scattered x-with-a-bar characters - HD44780 code 0xF8 - which is the signature of bytes arriving at a quarter of the receiver's rate. A long start bit fills the low three bits with zeros and the next long bit fills the rest with ones.",
+        "The vendor's own daemon sets the port with `stty ispeed 2400`. That sets only the INPUT speed, and a 16550-class UART has a single divisor, so on the vendor's system the line stays at the 9600 default. Reading the vendor's line setting literally is what kept this panel garbled for a week.",
+        "A rate sweep that sets the speed on the .init device and then writes through a fresh open of the port is not a reliable way to test this - that method is how every candidate rate once looked wrong. LCDd opens the port once and sets it with tcsetattr, which is why the decisive test was LCDd itself with Speed set.",
+        "Heartbeat stays off, as on the XG 330: the panel has no programmable character for it.",
+        "The keys are not read by LCDd here. The bridge never answers LCDd's key request (FE 06) and sends a letter of its own accord instead, which LCDd would discard - so LCDd is told Keypad=no and the plugin reads the port itself.",
+        "The panel is not drawn by LCDd either. Its bridge carries out no positioning command at all - clear, home and the line addresses are swallowed and do nothing - and writes every character at a cursor that runs round all forty cells, the first row and then the second. LCDd rewrites only what changed, so each update moved the whole picture by however many characters it wrote. The plugin draws this panel itself, always forty characters at once, which leaves the cursor where it was; the owner lines the text up once from the Buttons tab."
+      ],
+      "hint": "Proposed from the board: these models are built on the XGS 3300's board, AMDA0202, on which this panel was confirmed at 9600, and an XGS 3100's owner saw the 2400 signature - scattered x-with-a-bar characters - under the general entry. Press Test after applying: two lines of text read right on the panel confirm it."
+    },
     "sophos-xg-family": {
       "display": "Sophos XG / XGS (panel not confirmed on this model)",
       "comment": [

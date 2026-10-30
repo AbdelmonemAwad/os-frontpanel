@@ -33,6 +33,14 @@ rotate on a timer whether the keys work or not.
 Plugin Changelog
 ================
 
+1.0.5
+
+* The XGS 3300's panel settings - 9600 baud, 20x2, drawn by the plugin -
+  offered to the other models built on its board, AMDA0202: the XGS
+  2100, 2300 and 3100, matched on the assembly number in the board's
+  serial and marked unconfirmed. They fell to the general entry, whose
+  2400 baud garbles this panel (os-xgs-npu issue 901)
+
 1.0.4
 
 * The page's entry in the XGS section of the menu carries an icon, as
