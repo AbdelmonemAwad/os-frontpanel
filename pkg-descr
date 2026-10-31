@@ -33,6 +33,15 @@ rotate on a timer whether the keys work or not.
 Plugin Changelog
 ================
 
+1.0.6
+
+* Any other Sophos XGS has an entry of its own, ahead of the general
+  one, proposing 20x2: the XGS panels seen so far are 20 characters by
+  2 lines. The older XG models keep the general entry's 16x2
+* The XGS 2100, 2300 and 3100 entry starts the text at offset 24, where
+  an XGS 3100's ruler showed its G in the top-left corner (os-xgs-npu
+  issue 901) - written only where nobody has lined the text up yet
+
 1.0.5
 
 * The XGS 3300's panel settings - 9600 baud, 20x2, drawn by the plugin -
