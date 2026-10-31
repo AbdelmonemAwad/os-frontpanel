@@ -256,6 +256,11 @@ class Direct(object):
         self.since = 0.0
         self.drawn = None
         self.drawn_at = 0.0
+        if (panel or {}).get('offset') and not os.path.exists(STATE):
+            # Nobody has lined this panel up yet: start where its entry says the
+            # cursor was found on a panel of this model, and keep that, so the
+            # page's ruler counts from the same cell this draws from.
+            save_offset(panel['offset'])
         self.offset = load_offset()
         self.offset_at = self._stamp()
         self.events = []

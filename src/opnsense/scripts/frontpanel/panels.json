@@ -113,7 +113,11 @@
         "the vendor's 1US startup script in its GPL sources names) and the 3100 (-0003, its owner's support",
         "bundle, issue 901). Matched on the board, not on model strings nobody here has read, and offered",
         "unconfirmed: the panel is confirmed on the 3300 alone, which still matches the entry above on its",
-        "own strings first."
+        "own strings first.",
+        "The text starts at offset 24: the XGS 3100's owner brought the ruler up at offset 0 and read G,",
+        "its seventeenth character, in the top left corner (issue 901) - 0 - 16, round forty cells, is 24.",
+        "One appliance's reading, offered as the start: bridge.py writes it only where nobody has lined",
+        "the text up yet, and Align the text still sets it."
       ],
       "match": {
         "maker": "^Sophos$",
@@ -129,6 +133,7 @@
         "Speed": "9600"
       },
       "direct": true,
+      "offset": 24,
       "keybytes": {
         "A": "Enter",
         "B": "Escape",
@@ -153,9 +158,44 @@
         "A rate sweep that sets the speed on the .init device and then writes through a fresh open of the port is not a reliable way to test this - that method is how every candidate rate once looked wrong. LCDd opens the port once and sets it with tcsetattr, which is why the decisive test was LCDd itself with Speed set.",
         "Heartbeat stays off, as on the XG 330: the panel has no programmable character for it.",
         "The keys are not read by LCDd here. The bridge never answers LCDd's key request (FE 06) and sends a letter of its own accord instead, which LCDd would discard - so LCDd is told Keypad=no and the plugin reads the port itself.",
-        "The panel is not drawn by LCDd either. Its bridge carries out no positioning command at all - clear, home and the line addresses are swallowed and do nothing - and writes every character at a cursor that runs round all forty cells, the first row and then the second. LCDd rewrites only what changed, so each update moved the whole picture by however many characters it wrote. The plugin draws this panel itself, always forty characters at once, which leaves the cursor where it was; the owner lines the text up once from the Buttons tab."
+        "The panel is not drawn by LCDd either. Its bridge carries out no positioning command at all - clear, home and the line addresses are swallowed and do nothing - and writes every character at a cursor that runs round all forty cells, the first row and then the second. LCDd rewrites only what changed, so each update moved the whole picture by however many characters it wrote. The plugin draws this panel itself, always forty characters at once, which leaves the cursor where it was; the owner lines the text up once from the Buttons tab.",
+        "Text starts at offset 24: an XGS 3100's ruler came up with its G in the top left corner (os-xgs-npu issue 901). If the text sits elsewhere on yours, Align the text, on the Buttons tab, sets it."
       ],
       "hint": "Proposed from the board: these models are built on the XGS 3300's board, AMDA0202, on which this panel was confirmed at 9600, and an XGS 3100's owner saw the 2400 signature - scattered x-with-a-bar characters - under the general entry. Press Test after applying: two lines of text read right on the panel confirm it."
+    },
+    "sophos-xgs-family": {
+      "display": "Sophos XGS (panel not confirmed on this model)",
+      "comment": [
+        "A Sophos XGS whose model nobody has watched here, ahead of the general entry below for one",
+        "thing: the size. The XGS panels seen so far - the 3300's and a 3100's, one board - are 20",
+        "characters by 2 lines, and the general entry's 16x2 is the older XG panels' size: an XGS 3100",
+        "owner's settings came from it at 16x2 (issue 901). Everything else is the general entry's,",
+        "and offered as a guess the same way."
+      ],
+      "match": {
+        "maker": "^Sophos$",
+        "product": "^XGS$"
+      },
+      "driver": "hd44780",
+      "options": {
+        "ConnectionType": "ezio",
+        "Device": "/dev/cuau1",
+        "Size": "20x2",
+        "Keypad": "yes"
+      },
+      "keymap": {
+        "KeyMatrix_4_1": "Down",
+        "KeyMatrix_4_2": "Escape",
+        "KeyMatrix_4_3": "Up",
+        "KeyMatrix_4_4": "Enter"
+      },
+      "speed": {
+        "bus_delay": 2,
+        "refresh_seconds": 4,
+        "heartbeat": false
+      },
+      "confirmed": "",
+      "hint": "Nobody has confirmed this model yet. XGS panels confirmed so far - on an XGS 3300 and an XGS 3100 - are 20 characters by 2 lines, so 20x2 is proposed here; older XG models keep 16x2. Press Test after applying: two lines of text read right on the panel confirm it. The key map is copied from XG 330 rev 2 and is a guess here: measure it with the key test before you trust which button is which."
     },
     "sophos-xg-family": {
       "display": "Sophos XG / XGS (panel not confirmed on this model)",

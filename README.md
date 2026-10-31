@@ -355,8 +355,16 @@ Since 1.0.5 (2026-10-30) a third entry offers the XGS 3300's settings to the oth
 its board, AMDA0202 - the XGS 2100, 2300 and 3100 - matched on the assembly number the board's
 serial carries rather than on model strings nobody here has read, and marked unconfirmed. Until then
 the entry had matched the XGS 3300 alone, and an XGS 3100 fell to the general one, whose 2400 baud
-garbles this panel ([os-xgs-npu#901](https://github.com/AbdelmonemAwad/os-xgs-npu/issues/901)); 9600
-has not been confirmed on that model's panel yet.
+garbles this panel ([os-xgs-npu#901](https://github.com/AbdelmonemAwad/os-xgs-npu/issues/901)); ~~9600
+has not been confirmed on that model's panel yet~~ an XGS 3100's owner confirmed it that evening: two
+lines read right at 9600, at 20x2 once Size was set, and lined up with Align the text. That 3100's ruler
+came up with its G in the top-left corner, so since 1.0.6 the entry starts the text at offset 24
+wherever nobody has lined it up yet.
+
+Since 1.0.6 (2026-10-31) any other Sophos XGS has an entry of its own, ahead of the general one, for
+its size: the XGS panels seen so far are 20 characters by 2 lines, and the general entry's 16x2 - the
+older XG panels' size, which they keep - had reached that 3100's saved settings. Like the general
+entry, it is a guess and says so.
 
 Everything else is a choice the page offers you, not hardware somebody has tested. The settings page
 lists the 36 drivers the `lcdproc` package installs, and "support for other appliances" means exactly

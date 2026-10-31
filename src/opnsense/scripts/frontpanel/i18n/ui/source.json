@@ -221,5 +221,8 @@
  "BSD-2-Clause licence",
  "An independent project, not affiliated with Deciso B.V.",
  "Sophos XGS front panel (the XGS 2100, 2300 and 3100: the XGS 3300's board, AMDA0202)",
- "Proposed from the board: these models are built on the XGS 3300's board, AMDA0202, on which this panel was confirmed at 9600, and an XGS 3100's owner saw the 2400 signature - scattered x-with-a-bar characters - under the general entry. Press Test after applying: two lines of text read right on the panel confirm it."
+ "Proposed from the board: these models are built on the XGS 3300's board, AMDA0202, on which this panel was confirmed at 9600, and an XGS 3100's owner saw the 2400 signature - scattered x-with-a-bar characters - under the general entry. Press Test after applying: two lines of text read right on the panel confirm it.",
+ "Text starts at offset 24: an XGS 3100's ruler came up with its G in the top left corner (os-xgs-npu issue 901). If the text sits elsewhere on yours, Align the text, on the Buttons tab, sets it.",
+ "Sophos XGS (panel not confirmed on this model)",
+ "Nobody has confirmed this model yet. XGS panels confirmed so far - on an XGS 3300 and an XGS 3100 - are 20 characters by 2 lines, so 20x2 is proposed here; older XG models keep 16x2. Press Test after applying: two lines of text read right on the panel confirm it. The key map is copied from XG 330 rev 2 and is a guess here: measure it with the key test before you trust which button is which."
 ]
