@@ -41,9 +41,11 @@ interface. When the panel does not light, the fault is in a configuration file y
 than in code you cannot.
 
 Tested on OPNsense 26.7.4_1 / FreeBSD 15.1, on one machine: an ex-Sophos XG 330 rev 2 whose front
-panel is 16×2 characters with four keys, on the second of its two serial ports. Everything below
+panel is 16×2 characters with four keys, on the second of its two serial ports - and since
+2026-10-02 on an XGS 3300 too, which runs it on OPNsense 26.7.8_1 (2026-10-31). Everything below
 that says **measured here** was measured on that machine; everything else is marked where it
-matters. The hardware table ships with **exactly one confirmed entry**, and
+matters. The hardware table ships with ~~**exactly one confirmed entry**~~ **two confirmed entries**, the XG 330
+rev 2's and the XGS 3300's, and
 [Other appliances](#other-appliances) says what that means for yours.
 
 <p align="center"><b>Contents:</b> <a href="#the-screen-that-said-sophos-for-months">The screen that said SOPHOS for months</a> &middot; <a href="#what-you-need">What you need</a> &middot; <a href="#nothing-runs-until-you-turn-it-on">Nothing runs until you turn it on</a> &middot; <a href="#the-page">The page</a> &middot; <a href="#settings-and-the-speeds">Settings, and the speeds</a> &middot; <a href="#screens">Screens</a> &middot; <a href="#the-keys">The keys</a> &middot; <a href="#the-buttons-and-the-menu">The buttons and the menu</a> &middot; <a href="#other-appliances">Other appliances</a> &middot; <a href="#installation">Installation</a> &middot; <a href="#how-it-works">How it works</a> &middot; <a href="#the-gui-in-arabic">The GUI in Arabic</a> &middot; <a href="#what-it-does-not-do">What it does not do</a> &middot; <a href="#in-the-xgs-image">In the XGS image</a> &middot; <a href="#updates">Updates</a> &middot; <a href="#license">License</a></p>
@@ -220,7 +222,7 @@ order:
 The **message** screen is there because a firewall in a rack is usually read by somebody who is not
 its administrator. "Do not power off - ask Abdelmonem" is a perfectly good use of sixteen characters.
 
-The **ports** screen is the only contact this plugin has with my other plugin, os-linkhealth: it
+The **ports** screen is the only contact this plugin has with os-linkhealth, another plugin of the family: it
 reads `/var/db/linkhealth/status.json` if that file happens to exist, and the screen simply does not
 appear in the list if it does not. There is no dependency, no shared code and no package requirement
 in either direction. Install one, both, or neither.

@@ -1,9 +1,10 @@
 # Adding your appliance to `panels.json`
 
-The table this plugin ships has **one confirmed entry**: an ex-Sophos XG 330 rev 2, whose display has
-been watched working and photographed, and whose four keys were then measured one button at a time.
-That is the honest state of the hardware support, and this page is how a second entry gets added to
-it.
+The table this plugin ships has ~~**one confirmed entry**~~ **two confirmed entries**: an ex-Sophos XG 330
+rev 2, whose display has been watched working and photographed, and whose four keys were then measured
+one button at a time; and an XGS 3300, its display read on 2026-10-02 and its keys measured on
+2026-10-17. That is the honest state of the hardware support, and this page is how ~~a second~~ another
+entry gets added to it.
 
 There is no code to write. An appliance entry is one block of JSON that says: this is how to
 recognise the machine, this is the LCDproc driver its panel needs, these are that driver's settings,
@@ -12,7 +13,7 @@ fills the settings form in with the proposal and waits for a human to press Appl
 wrong entry can do is waste your evening, not your firewall's.
 
 Everything marked **measured here** was read from the reference machine, an ex-Sophos XG 330 rev 2
-running OPNsense 26.7.4_1 / FreeBSD 15.1. The commands below are the ones that produced it.
+then running OPNsense 26.7.4_1 / FreeBSD 15.1. The commands below are the ones that produced it.
 
 ---
 
@@ -46,7 +47,7 @@ section 5, where something first writes to the port, that wants a quiet hour.
 
 ## 1. Work out which box this is
 
-Recognition uses the identity the BIOS reports through SMBIOS, exactly as my other plugin does for
+Recognition uses the identity the BIOS reports through SMBIOS, exactly as os-linkhealth, another plugin of the family, does for
 chassis port labels:
 
 ```sh
@@ -171,8 +172,8 @@ descriptions of the original firmware, not verified here)~~ from **`/dev/ttyS1`*
 its own that is not LCDproc** - verified on an XGS 3300 under vendor build 22.0.2 on 2026-09-28
 ([#4](https://github.com/AbdelmonemAwad/os-frontpanel/issues/4)). The port was right: the serial
 driver's table showed transmit climbing on port 1 and receive at zero while the daemon painted the
-display. The daemon was not LCDproc. It is named `lcdd`, but its package says `sfos/lcdd`,
-`Sophos-Proprietary`, with six back ends compiled in and chosen by `LCD_DRIVER`; this model runs
+display. The daemon was not LCDproc. It is named `lcdd`, but its package is the vendor firmware's own,
+under a proprietary licence, with six back ends compiled in and chosen by `LCD_DRIVER`; this model runs
 `GIFAR`. ~~The moment that was known, the shape of the answer was known: the panel speaks something
 LCDproc already supports, on the second serial port, and everything left is which connection type
 and what speed.~~ The port was the useful part. The protocol had to be measured on the glass: the
