@@ -139,4 +139,8 @@ jobs:
       # holds - in both directions, because a msgid with no Arabic is as broken as an
       # Arabic string with no msgid.
       - name: Every string asked for is catalogued and translated
+        # A contributor's pull request (from a fork) and main may carry a string whose Arabic follows
+        # later (CONTRIBUTING.md): a warning there; on a branch of this repository a failure, as before.
+        env:
+          ARABIC_LATER: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository) && '1' || '' }}
         run: python3 tools/check-strings.py
