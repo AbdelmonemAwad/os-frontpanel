@@ -26,7 +26,8 @@ ValidationMessages in its model are missing from its catalogue to this day (meas
 
 Exit status matters. The job that runs this used to pass because the file did not exist,
 which is worse than failing: a green check that checks nothing. A msgid the page asks for
-and the catalogue does not hold, or holds without Arabic, fails the build.
+and the catalogue does not hold, or holds without Arabic, fails the build - the second a warning
+where ARABIC_LATER is set (below), on a contributor's pull request and on main.
 """
 import glob
 import json
@@ -34,6 +35,26 @@ import os
 import re
 import sys
 import xml.etree.ElementTree as ET
+
+# A contributor who does not write Arabic leaves it out (CONTRIBUTING.md). On a pull request from a
+# fork and on main, checks.yml sets ARABIC_LATER=1: a string without Arabic is then a warning on the
+# pull request and not a failure, and opnsense-arabic's "Strings waiting for Arabic" lists it until
+# its Arabic is there. A pull request from a branch of this repository still fails on one.
+LATER = os.environ.get('ARABIC_LATER') == '1'
+
+
+def later(keys):
+    """Each string without Arabic as a warning GitHub shows on the pull request, and in its summary."""
+    if not LATER:
+        return
+    for key in keys:
+        print('::warning title=Arabic to follow::' +
+              key.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+    summary = os.environ.get('GITHUB_STEP_SUMMARY')
+    if keys and summary:
+        with open(summary, 'a', encoding='utf-8') as handle:
+            handle.write('### Strings waiting for Arabic\n\n' + ''.join('- %s\n' % key for key in keys))
+
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -143,7 +164,9 @@ def main():
     print('catalogued but with no Arabic in opnsense-arabic: %d' % len(missing))
     for key in missing:
         print('   ? ' + key[:100])
-    problems += len(missing)
+    later(missing)
+    if not LATER:
+        problems += len(missing)
 
     # Not counted as a problem. A msgid nobody asks for costs a line in a JSON file; a
     # msgid nobody translated costs an English sentence in the middle of an Arabic page.
