@@ -33,7 +33,12 @@ if [ ! -x /usr/local/sbin/LCDd ]; then
 fi
 
 # plugin files: src/ maps to /usr/local
+# The public keys a release must be signed with for self-update.py to install it (its
+# SIGNED RELEASES) are the set this tree holds and no other: the installed ones go first,
+# so a key the tree dropped goes with this install.
+rm -rf /usr/local/opnsense/scripts/frontpanel/release-keys
 cp -R "${HERE}/src/" /usr/local/
+chmod 644 /usr/local/opnsense/scripts/frontpanel/release-keys/*.pub
 
 # frontpanel.py is run by the rc script and by configd, so it needs the bit; the modules
 # beside it are imported rather than executed, and panels.json is only ever read. Giving the
