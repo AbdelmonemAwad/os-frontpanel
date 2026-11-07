@@ -139,7 +139,10 @@ DEFAULTS = {
     'refresh_seconds': LIMITS['refresh_seconds'][2],
     'heartbeat': False,
     'screens': 'identity,wan,throughput,system,temperature,ports,message',
-    'message': '',
+    # The message screen's two lines, one to a row. The same defaults as the model's, and
+    # read the same way: see message_lines() below.
+    'message': '@NPUforge',
+    'message2': 'https://npuforge.org/',
     'throughput_if': '',
     'power': True,
     'keys': [],
@@ -532,10 +535,12 @@ def settings(root=None):
     values['heartbeat'] = text('heartbeat', '0') == '1'
     values['power'] = text('panel_power', '1') == '1'
 
-    for name in ('driver', 'connection', 'device', 'size', 'screens', 'message', 'throughput_if'):
+    for name in ('driver', 'connection', 'device', 'size', 'screens', 'throughput_if'):
         found = text(name)
         if found is not None:
             values[name] = found.strip()
+
+    values.update(message_lines(general))
 
     for name in ('screen_seconds', 'scroll_speed', 'bus_delay', 'refresh_seconds'):
         values[name] = _clamp(name, text(name, DEFAULTS[name]))
@@ -544,6 +549,33 @@ def settings(root=None):
         values['size'] = DEFAULTS['size']
 
     return values
+
+
+def message_lines(general):
+    """The message screen's two lines, as config.xml has them.
+
+    Unlike every other text field here, an empty line is not the default: an
+    owner who emptied a line meant it, and the line stays empty. Only a line
+    that is not in the file at all takes its default. Before 1.2.0 there was a
+    single line, `message`, and the model's migration (Migrations/M1_2_0.php)
+    decides what a saved one becomes; this decides the same, so the panel says
+    the same thing before the migration has run as after:
+
+        nothing saved              both defaults
+        a message written          it, and an empty second line
+        the message saved empty    both defaults - nobody wrote one, since
+                                   every version before 1.2.0 shipped it empty
+    """
+    first = general.find('message')
+    second = general.find('message2')
+    if first is None:
+        return {'message': DEFAULTS['message'], 'message2': DEFAULTS['message2']}
+    written = (first.text or '').strip()
+    if second is None:
+        if written:
+            return {'message': written, 'message2': ''}
+        return {'message': DEFAULTS['message'], 'message2': DEFAULTS['message2']}
+    return {'message': written, 'message2': (second.text or '').strip()}
 
 
 def geometry(size):

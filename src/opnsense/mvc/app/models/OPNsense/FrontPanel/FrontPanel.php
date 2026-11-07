@@ -33,6 +33,13 @@ use OPNsense\Base\Messages\Message;
 
 class FrontPanel extends BaseModel
 {
+    /**
+     * The two lines of the message as the model ships them - the <Default> of each in
+     * FrontPanel.xml, written again here because a field does not hand its default back.
+     * tools/test-message.py holds the two, and config.py's, to the same text.
+     */
+    private const MESSAGE_DEFAULTS = ['message' => '@NPUforge', 'message2' => 'https://npuforge.org/'];
+
     public function performValidation($validateFullModel = false)
     {
         $messages = parent::performValidation($validateFullModel);
@@ -58,28 +65,32 @@ class FrontPanel extends BaseModel
 
         $rotation = $general->screens->getValues();
         $message = trim((string)$general->message);
+        $message2 = trim((string)$general->message2);
         $throughput_if = (string)$general->throughput_if;
 
-        /* The message screen with no line yet is deliberately NOT a complaint, and this is
-           worth writing down because it looks like one that was forgotten.
+        /* The message screen with both lines emptied is deliberately NOT a complaint, and this
+           is worth writing down because it looks like one that was forgotten.
 
            A screen with nothing to say is skipped, and the preview says which and why - the
            ports screen does exactly that on a firewall without os-linkhealth, and the settings
-           page promises as much in as many words beside the rotation. The shipped rotation
-           contains every screen, including this one, and the shipped message is empty; refusing
-           the save would therefore refuse the settings this plugin installs with, on the first
-           visit, before the owner had written a single character. Every validation message here
-           stops a save - there is no channel for a remark - so the empty message belongs in the
-           preview, where it already is, and not here.
+           page promises as much in as many words beside the rotation. An owner who empties both
+           lines has said the panel has nothing of theirs to show, and every validation message
+           here stops a save - there is no channel for a remark - so the empty message belongs
+           in the preview, where it already is, and not here.
 
-           The other way round is a real mistake and the commoner one: a line written, saved,
-           and never shown, because the screen that would have shown it is not in the rotation.
-           Nothing else on the page would ever mention it. */
-        if (!in_array('message', $rotation) && $message !== '') {
-            $messages->appendMessage(new Message(
-                gettext('The message screen is not in the rotation, so this line would never be shown.'),
-                'general.message'
-            ));
+           The other way round is a real mistake: a line written, saved, and never shown,
+           because the screen that would have shown it is not in the rotation. Nothing else on
+           the page would ever mention it. It is said beside each line the owner wrote, and not
+           beside a line still holding its default: nobody wrote that one, and an owner taking
+           the message screen out of the rotation must not have the save refused over two
+           fields they never touched. */
+        foreach (['message' => $message, 'message2' => $message2] as $field => $line) {
+            if (!in_array('message', $rotation) && $line !== '' && $line !== self::MESSAGE_DEFAULTS[$field]) {
+                $messages->appendMessage(new Message(
+                    gettext('The message screen is not in the rotation, so this line would never be shown.'),
+                    'general.' . $field
+                ));
+            }
         }
 
         /* An interface chosen for a screen nobody is showing. Left empty the throughput screen

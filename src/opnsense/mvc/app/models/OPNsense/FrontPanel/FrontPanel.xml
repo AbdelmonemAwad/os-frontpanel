@@ -4,7 +4,7 @@
 -->
 <model>
     <mount>//OPNsense/FrontPanel</mount>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
     <description>Front panel</description>
     <items>
         <!--
@@ -195,18 +195,35 @@
                 <ValidationMessage>Choose screens from the list; that is not one of them.</ValidationMessage>
             </screens>
             <!--
-                The line the message screen shows. Quotes, backslashes and angle brackets are
-                kept out because this string is carried through a generated configuration file
-                and an HTML preview before it ever reaches the panel, and a character that needs
-                quoting in three places is a character that will eventually be quoted wrongly in
-                one of them. Anything else is allowed in, including text in any script: the
-                screen generator folds what it cannot draw and says in the preview that it did.
+                The two lines the message screen shows, one to a row of the display: `message` is
+                the first and `message2` the second. The first keeps the name the single line had
+                before 1.2.0, so a line an owner already wrote stays where it was without being
+                moved; Migrations/M1_2_0.php says what happens to the second.
+
+                Quotes, backslashes and angle brackets are kept out because these strings are
+                carried through a generated configuration file and an HTML preview before they
+                ever reach the panel, and a character that needs quoting in three places is a
+                character that will eventually be quoted wrongly in one of them. Anything else is
+                allowed in, including text in any script: the screen generator folds what it
+                cannot draw and says in the preview that it did.
+
+                The defaults are the project's own name and address. Either line may be emptied,
+                and with both empty the message screen has nothing to say and is skipped.
+                config.py, which reads config.xml without this model, keeps the same defaults
+                and tells a line that is absent (the default) from one that was emptied (empty).
             -->
             <message type="TextField">
+                <Default>@NPUforge</Default>
                 <AllowNewlines>N</AllowNewlines>
                 <Mask>/^[^"\\&lt;>]{1,64}$/u</Mask>
                 <ValidationMessage>Use up to 64 characters, without quotes, backslashes or angle brackets.</ValidationMessage>
             </message>
+            <message2 type="TextField">
+                <Default>https://npuforge.org/</Default>
+                <AllowNewlines>N</AllowNewlines>
+                <Mask>/^[^"\\&lt;>]{1,64}$/u</Mask>
+                <ValidationMessage>Use up to 64 characters, without quotes, backslashes or angle brackets.</ValidationMessage>
+            </message2>
             <!--
                 The interface the throughput screen measures, named the way the kernel names it
                 rather than the way the firewall labels it: the screen generator matches this

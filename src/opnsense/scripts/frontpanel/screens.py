@@ -678,23 +678,24 @@ def ports(width, height, options):
     return [cut(first, width), cut(second, width)]
 
 
+def message_text(options):
+    """The message's two lines as the owner wrote them, before any folding."""
+    return [(options.get('message') or '').strip(), (options.get('message2') or '').strip()]
+
+
 def message(width, height, options):
-    """A fixed line the owner writes, for a rack somebody else walks past."""
-    text = (options.get('message') or '').strip()
-    if not text:
+    """Two fixed lines the owner writes, for a rack somebody else walks past.
+
+    One line to a row, each folded and nothing more: a line longer than the
+    display is cut at its edge rather than carried onto the next row, which
+    belongs to the other line. The cut itself is render()'s, as for every
+    screen, and the preview is handed the lines before it (catalogue()), so
+    the page can show the owner the part that never reaches the panel.
+    """
+    lines = message_text(options)
+    if not any(lines):
         return None
-
-    folded = fold(text)
-    if len(folded) <= width:
-        return [folded, '']
-
-    # Break at a space when there is one in the right region, so a two-word
-    # message is not split through the middle of a word.
-    head = folded[:width]
-    space = head.rfind(' ')
-    if space >= width // 2:
-        return [head[:space].rstrip(), cut(folded[space + 1:], width)]
-    return [head, cut(folded[width:], width)]
+    return [fold(line) for line in lines]
 
 
 # Order matters: this is the order the screens rotate in unless the settings
@@ -774,9 +775,13 @@ def catalogue(width, height, options, only=None):
         }
 
         if key == 'message' and lines is not None:
-            raw = (options.get('message') or '').strip()
-            if fold(raw) != raw:
-                entry['source'] = raw
+            # Folded but not cut, so the page can draw the part of a line that
+            # is wider than the display past its edge - the cut the owner has
+            # to see. Every other screen cuts its own lines to fit.
+            entry['lines'] = message(width, height, options)
+            raw = message_text(options)
+            if [fold(line) for line in raw] != raw:
+                entry['source'] = ' | '.join(line for line in raw if line)
                 entry['note'] = 'the panel has no glyph for some of these characters'
 
         if lines is None:
@@ -797,7 +802,7 @@ def _absence(key):
     if key == 'temperature':
         return 'this board reports no CPU temperature'
     if key == 'message':
-        return 'no message has been written'
+        return 'both lines of the message are empty'
     if key == 'throughput':
         return 'no interface chosen and no WAN configured'
     return 'nothing to show on this machine'
