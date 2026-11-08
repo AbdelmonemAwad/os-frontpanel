@@ -213,13 +213,13 @@
                 and tells a line that is absent (the default) from one that was emptied (empty).
             -->
             <message type="TextField">
-                <Default>@NPUforge</Default>
+                <Default>NPUforge</Default>
                 <AllowNewlines>N</AllowNewlines>
                 <Mask>/^[^"\\&lt;>]{1,64}$/u</Mask>
                 <ValidationMessage>Use up to 64 characters, without quotes, backslashes or angle brackets.</ValidationMessage>
             </message>
             <message2 type="TextField">
-                <Default>https://npuforge.org/</Default>
+                <Default>www.npuforge.com</Default>
                 <AllowNewlines>N</AllowNewlines>
                 <Mask>/^[^"\\&lt;>]{1,64}$/u</Mask>
                 <ValidationMessage>Use up to 64 characters, without quotes, backslashes or angle brackets.</ValidationMessage>

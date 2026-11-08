@@ -38,7 +38,7 @@ class FrontPanel extends BaseModel
      * FrontPanel.xml, written again here because a field does not hand its default back.
      * tools/test-message.py holds the two, and config.py's, to the same text.
      */
-    private const MESSAGE_DEFAULTS = ['message' => '@NPUforge', 'message2' => 'https://npuforge.org/'];
+    private const MESSAGE_DEFAULTS = ['message' => 'NPUforge', 'message2' => 'www.npuforge.com'];
 
     public function performValidation($validateFullModel = false)
     {

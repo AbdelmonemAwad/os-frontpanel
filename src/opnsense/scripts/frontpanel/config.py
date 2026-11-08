@@ -141,8 +141,8 @@ DEFAULTS = {
     'screens': 'identity,wan,throughput,system,temperature,ports,message',
     # The message screen's two lines, one to a row. The same defaults as the model's, and
     # read the same way: see message_lines() below.
-    'message': '@NPUforge',
-    'message2': 'https://npuforge.org/',
+    'message': 'NPUforge',
+    'message2': 'www.npuforge.com',
     'throughput_if': '',
     'power': True,
     'keys': [],

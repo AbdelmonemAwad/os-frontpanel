@@ -223,9 +223,10 @@ The **message** screen is there because a firewall in a rack is usually read by 
 its administrator. It has two lines, one to each row of the display, and each is cut at the display's
 width rather than carried onto the other row - the preview shows exactly where. "Do not power off" over
 "ask Abdelmonem" is a perfectly good use of thirty-two characters. Out of the box the two lines are
-`@NPUforge` and `https://npuforge.org/`; a 16-column display cuts the second, and the preview shows
-that too. Empty both and the screen is skipped. A message written under an earlier release, when it
-was one line, stays: it becomes the first line, and the second is left empty.
+`NPUforge` and `www.npuforge.com` - sixteen characters, which a 16-column display shows whole; a longer
+line is cut, and the preview shows that too. Empty both and the screen is skipped. A message written
+under an earlier release, when it was one line, stays: it becomes the first line, and the second is
+left empty.
 
 The **ports** screen is the only contact this plugin has with os-linkhealth, another plugin of the family: it
 reads `/var/db/linkhealth/status.json` if that file happens to exist, and the screen simply does not

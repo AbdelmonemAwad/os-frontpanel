@@ -42,7 +42,7 @@ def load(name):
 config = load('config')
 screens = load('screens')
 
-FIRST, SECOND = '@NPUforge', 'https://npuforge.org/'
+FIRST, SECOND = 'NPUforge', 'www.npuforge.com'
 
 
 def saved(general):
@@ -87,12 +87,12 @@ check('the first line emptied stays empty', lines('<message/><message2>Two</mess
 check('both emptied stay empty', lines('<message/><message2/>'), ['', ''])
 
 # What the panel is sent: one line to a row, each cut at the width and never carried over.
-check('16x2, the defaults: the address is cut at 16',
+check('16x2, the defaults: both whole, the address exactly 16 wide',
       screens.render('message', 16, 2, {'message': FIRST, 'message2': SECOND}),
-      ['@NPUforge', 'https://npuforge'])
-check('20x2, the defaults: the address is cut at 20',
+      ['NPUforge', 'www.npuforge.com'])
+check('20x2, the defaults: both whole',
       screens.render('message', 20, 2, {'message': FIRST, 'message2': SECOND}),
-      ['@NPUforge', 'https://npuforge.org'])
+      ['NPUforge', 'www.npuforge.com'])
 check('a long first line is cut, not carried onto the second row',
       screens.render('message', 16, 2, {'message': 'Do not power this off', 'message2': ''}),
       ['Do not power thi', ''])
