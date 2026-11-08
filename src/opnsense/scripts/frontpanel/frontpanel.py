@@ -756,7 +756,7 @@ class Client(object):
         # Anything LCDd itself had to be told - the driver, the port, the
         # speeds - is not adopted here: that is a new LCDd.conf and a restart,
         # and `start` does it by comparing the file it wrote.
-        for name in ('screens', 'message', 'throughput_if', 'keys', 'keypad', 'power'):
+        for name in ('screens', 'message', 'message2', 'throughput_if', 'keys', 'keypad', 'power'):
             self.options[name] = fresh[name]
         self.actions = keypad.actions_for(self.options)
         if self.port is not None:

@@ -100,10 +100,17 @@
     </field>
     <field>
         <id>frontpanel.general.message</id>
-        <label>Message</label>
+        <label>Message, first line</label>
         <type>text</type>
-        <hint>Ask Abdelmonem before unplugging</hint>
-        <help>The line the message screen shows, for a rack somebody else walks past. Anything longer than the display is wide is wrapped onto the second row, and what still does not fit is cut - the preview shows exactly where. A character panel has no glyph for most of the world's alphabets, so text that is not plain Latin is folded to the nearest thing it can draw, and the preview shows what the owner typed beside what the panel would make of it.</help>
+        <hint>Ask Abdelmonem</hint>
+        <help>The first row of the message screen, for a rack somebody else walks past. Each line has a row of the display to itself: anything longer than the display is wide is cut, not carried onto the next row - the preview shows exactly where. A character panel has no glyph for most of the world's alphabets, so text that is not plain Latin is folded to the nearest thing it can draw, and the preview shows what the owner typed beside what the panel would make of it.</help>
+    </field>
+    <field>
+        <id>frontpanel.general.message2</id>
+        <label>Message, second line</label>
+        <type>text</type>
+        <hint>before unplugging</hint>
+        <help>The second row of the message screen, cut at the width of the display as the first is, and folded the same way. Empty both lines and the message screen has nothing to say, so the rotation skips it.</help>
     </field>
     <field>
         <id>frontpanel.general.throughput_if</id>

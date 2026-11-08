@@ -22,7 +22,7 @@ line scrolls, how often the display is redrawn from scratch, and the bus
 delay to raise when characters go missing. The shipped screens are the
 hostname and LAN address, the WAN address and its gateway, throughput on
 a chosen interface, CPU, memory and uptime, the CPU temperature where a
-sensor exists, a fixed message of your own, and - only where Link Health
+sensor exists, a two-line message of your own, and - only where Link Health
 happens to be installed - the worst port and its verdict.
 
 The keys are polled rather than volunteered, and not every panel answers.

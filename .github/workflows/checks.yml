@@ -39,6 +39,17 @@ jobs:
       - name: self-update.py takes a release only as signed
         run: python3 tools/test-self-update.py
 
+  message:
+    name: message
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The message screen's two lines: their defaults, a message saved as one line before
+      # there were two, the cut at the display's width, and what the preview is handed.
+      - name: the message screen draws two lines, one to a row
+        run: python3 tools/test-message.py
+
   syntax:
     name: syntax
     runs-on: ubuntu-latest

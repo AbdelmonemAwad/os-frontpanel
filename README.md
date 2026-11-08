@@ -217,10 +217,16 @@ order:
 | system | CPU, memory, uptime |
 | temperature | the CPU sensor, on machines that have one |
 | ports | the worst port and its verdict — `PortA3 FAIL`, `3.8% bad frames` — **only when os-linkhealth is installed** |
-| message | a fixed line you write yourself |
+| message | two fixed lines you write yourself, one to a row |
 
 The **message** screen is there because a firewall in a rack is usually read by somebody who is not
-its administrator. "Do not power off - ask Abdelmonem" is a perfectly good use of sixteen characters.
+its administrator. It has two lines, one to each row of the display, and each is cut at the display's
+width rather than carried onto the other row - the preview shows exactly where. "Do not power off" over
+"ask Abdelmonem" is a perfectly good use of thirty-two characters. Out of the box the two lines are
+`NPUforge` and `www.npuforge.com` - sixteen characters, which a 16-column display shows whole; a longer
+line is cut, and the preview shows that too. Empty both and the screen is skipped. A message written
+under an earlier release, when it was one line, stays: it becomes the first line, and the second is
+left empty.
 
 The **ports** screen is the only contact this plugin has with os-linkhealth, another plugin of the family: it
 reads `/var/db/linkhealth/status.json` if that file happens to exist, and the screen simply does not
@@ -516,7 +522,7 @@ is folded before it is ever sent, on purpose: an accented Latin letter loses its
 panel that can draw `e` should show `e`, and everything left outside ASCII — Arabic, CJK, an emoji —
 becomes `?` rather than whichever arbitrary glyph that panel happens to keep at those codes. No
 setting in this plugin changes that. What the plugin does instead is show you: the preview renders
-the folded line, and says plainly when folding changed what you typed, so an Arabic `message` is seen
+the folded line, and says plainly when folding changed what you typed, so an Arabic message is seen
 on the page rather than discovered at the rack.
 
 ## What it does not do

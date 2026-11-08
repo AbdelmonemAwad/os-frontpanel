@@ -185,7 +185,7 @@ Each screen is a small generator: it returns two lines of at most `size` columns
 - **temperature** — the CPU sensor, where one exists
 - **ports** *(only when os-linkhealth is installed)* — the worst port and its verdict:
   `PortA3 FAIL` / `3.8% bad frames`
-- **message** — a fixed line the owner writes, for a rack somebody else walks past
+- **message** — two fixed lines the owner writes, one to a row, for a rack somebody else walks past
 
 The ports screen reads os-linkhealth's status document if it is there and disappears from the list
 if it is not. That is the whole of the relationship between the two plugins: one file, read-only,
