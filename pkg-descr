@@ -33,6 +33,11 @@ rotate on a timer whether the keys work or not.
 Plugin Changelog
 ================
 
+1.0.8
+
+* The panel's message in two lines, NPUforge over www.npuforge.com by
+  default
+
 1.0.7
 
 * an update installed only as its owner signed it: the release's
