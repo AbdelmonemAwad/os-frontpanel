@@ -105,6 +105,64 @@
         "The panel is not drawn by LCDd either. Its bridge carries out no positioning command at all - clear, home and the line addresses are swallowed and do nothing - and writes every character at a cursor that runs round all forty cells, the first row and then the second. LCDd rewrites only what changed, so each update moved the whole picture by however many characters it wrote. The plugin draws this panel itself, always forty characters at once, which leaves the cursor where it was; the owner lines the text up once from the Buttons tab."
       ]
     },
+    "xgs-3100": {
+      "display": "XGS 3100 front panel (board AMDA0202-0003)",
+      "comment": [
+        "The XGS 3100 alone, ahead of the entry for its board below, confirmed on the panel of one: the",
+        "values are the ones its owner's appliance confirmed in os-xgs-npu issue 901, where the plugin's",
+        "1.0.5 and 1.0.6 took them from. 9600 and 20x2: the owner read two lines of text right on the panel at",
+        "that speed, once Size was set to 20x2 - the 16x2 the saved settings had come from was the general",
+        "entry's. The offset: the owner brought the ruler up at offset 0 and read G, its seventeenth character,",
+        "in the top left corner - 0 - 16, round forty cells, is 24 - and lined the text up from there.",
+        "Matched on the assembly number SMBIOS type 2 carries in its serial, AMDA0202-0003, the one the",
+        "owner's support bundle showed (board 202, OCTEON TX), and on the maker, like every XGS entry here. The",
+        "serial is not anchored at either end on purpose: SMBIOS type 2's serial is a prefix, then the assembly",
+        "number, then the unit's own number run straight on after the assembly's four digits, so an anchor or a",
+        "word boundary there would miss the 3100 it is for. The 2100 and 2300, -0001 and -0002, still match",
+        "the board entry below and stay unconfirmed. The key codes are the XGS 3300's; nobody has",
+        "measured them on a 3100, and Learn the codes from the panel, on the Buttons tab, sets them."
+      ],
+      "match": {
+        "maker": "^Sophos$",
+        "product": "^XGS$",
+        "serial": "AMDA0202-0003"
+      },
+      "driver": "hd44780",
+      "options": {
+        "ConnectionType": "ezio",
+        "Device": "/dev/cuau1",
+        "Size": "20x2",
+        "Keypad": "yes",
+        "Speed": "9600"
+      },
+      "direct": true,
+      "offset": 24,
+      "keybytes": {
+        "A": "Enter",
+        "B": "Escape",
+        "C": "Up",
+        "D": "Down"
+      },
+      "keylabels": {
+        "Enter": "Enter",
+        "Escape": "Esc",
+        "Up": "Up arrow",
+        "Down": "Down arrow"
+      },
+      "speed": {
+        "bus_delay": 2,
+        "refresh_seconds": 4,
+        "heartbeat": false
+      },
+      "confirmed": "XGS 3100 (board AMDA0202-0003), 2026-10-30: the display is verified at 9600 - its owner read two lines of text right on the panel at 20x2 and lined them up with Align the text, and the ruler came up with its G in the top left corner, which is where offset 24 starts the text (os-xgs-npu issue 901). The key codes are the XGS 3300's and were not measured on this model.",
+      "notes": [
+        "Speed=9600 is required. ConnectionType=ezio on its own fixes the line at 2400, which is right for the XG 330 rev 2 and wrong here: at 2400 this panel draws scattered x-with-a-bar characters - HD44780 code 0xF8 - which is the signature of bytes arriving at a quarter of the receiver's rate. A long start bit fills the low three bits with zeros and the next long bit fills the rest with ones.",
+        "Heartbeat stays off, as on the XG 330: the panel has no programmable character for it.",
+        "The keys are not read by LCDd here. The bridge never answers LCDd's key request (FE 06) and sends a letter of its own accord instead, which LCDd would discard - so LCDd is told Keypad=no and the plugin reads the port itself.",
+        "The panel is not drawn by LCDd either. Its bridge carries out no positioning command at all - clear, home and the line addresses are swallowed and do nothing - and writes every character at a cursor that runs round all forty cells, the first row and then the second. LCDd rewrites only what changed, so each update moved the whole picture by however many characters it wrote. The plugin draws this panel itself, always forty characters at once, which leaves the cursor where it was; the owner lines the text up once from the Buttons tab.",
+        "Text starts at offset 24: an XGS 3100's ruler came up with its G in the top left corner (os-xgs-npu issue 901). If the text sits elsewhere on yours, Align the text, on the Buttons tab, sets it."
+      ]
+    },
     "sophos-xgs-amda0202": {
       "display": "Sophos XGS front panel (the XGS 2100, 2300 and 3100: the XGS 3300's board, AMDA0202)",
       "comment": [

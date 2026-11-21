@@ -1,9 +1,11 @@
 # Adding your appliance to `panels.json`
 
-The table this plugin ships has ~~**one confirmed entry**~~ **two confirmed entries**: an ex-Sophos XG 330
+The table this plugin ships has ~~**one confirmed entry**~~ ~~**two confirmed entries**~~ **three confirmed
+entries**: an ex-Sophos XG 330
 rev 2, whose display has been watched working and photographed, and whose four keys were then measured
-one button at a time; and an XGS 3300, its display read on 2026-10-02 and its keys measured on
-2026-10-17. That is the honest state of the hardware support, and this page is how ~~a second~~ another
+one button at a time; an XGS 3300, its display read on 2026-10-02 and its keys measured on
+2026-10-17; and an XGS 3100, its display read right at 9600 and 20x2 by its owner on 2026-10-30
+(os-xgs-npu issue 901). That is the honest state of the hardware support, and this page is how ~~a second~~ another
 entry gets added to it.
 
 There is no code to write. An appliance entry is one block of JSON that says: this is how to

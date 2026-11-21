@@ -162,7 +162,7 @@ def tree(options, width, order, ring=False):
         network.append(Item(info['descr'] or role.upper(), show=_interface(info)))
     network.append(Item('Gateway', show=_gateway))
 
-    rotation = [Item(screens.BY_KEY.get(key, (key,))[0], act=('pin', key)) for key in order]
+    rotation = [Item(screens.title(key, options), act=('pin', key)) for key in order]
 
     main = [
         Item('System', children=system),

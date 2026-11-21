@@ -100,9 +100,6 @@
  "Message, second line",
  "The second row of the message screen, cut at the width of the display as the first is, and folded the same way. Empty both lines and the message screen has nothing to say, so the rotation skips it.",
  "before unplugging",
- "Throughput interface",
- "The name the kernel gives the port the throughput screen measures, as shown under Interfaces. Leave it empty to measure the WAN, which is what somebody watching a firewall's front panel usually means.",
- "igb0",
  "Enter a connection type as LCDproc spells it, such as ezio.",
  "Enter the device node of a serial port, such as /dev/cuau1.",
  "Enter the size as columns by rows, such as 16x2.",
@@ -228,5 +225,13 @@
  "Proposed from the board: these models are built on the XGS 3300's board, AMDA0202, on which this panel was confirmed at 9600, and an XGS 3100's owner saw the 2400 signature - scattered x-with-a-bar characters - under the general entry. Press Test after applying: two lines of text read right on the panel confirm it.",
  "Text starts at offset 24: an XGS 3100's ruler came up with its G in the top left corner (os-xgs-npu issue 901). If the text sits elsewhere on yours, Align the text, on the Buttons tab, sets it.",
  "Sophos XGS (panel not confirmed on this model)",
- "Nobody has confirmed this model yet. XGS panels confirmed so far - on an XGS 3300 and an XGS 3100 - are 20 characters by 2 lines, so 20x2 is proposed here; older XG models keep 16x2. Press Test after applying: two lines of text read right on the panel confirm it. The key map is copied from XG 330 rev 2 and is a guess here: measure it with the key test before you trust which button is which."
+ "Nobody has confirmed this model yet. XGS panels confirmed so far - on an XGS 3300 and an XGS 3100 - are 20 characters by 2 lines, so 20x2 is proposed here; older XG models keep 16x2. Press Test after applying: two lines of text read right on the panel confirm it. The key map is copied from XG 330 rev 2 and is a guess here: measure it with the key test before you trust which button is which.",
+ "XGS 3100 front panel (board AMDA0202-0003)",
+ "XGS 3100 (board AMDA0202-0003), 2026-10-30: the display is verified at 9600 - its owner read two lines of text right on the panel at 20x2 and lined them up with Align the text, and the ruler came up with its G in the top left corner, which is where offset 24 starts the text (os-xgs-npu issue 901). The key codes are the XGS 3300's and were not measured on this model.",
+ "Throughput interfaces",
+ "The interfaces the throughput screen measures. The panel shows the screen once for each, in the order chosen here - drag them into the order you want - and names each by its description under Interfaces. Leave it empty to measure the WAN, which is what somebody watching a firewall's front panel usually means.",
+ "These saved settings differ from this appliance's entry in the table of known panels. Nothing changes until you put the entry's values in the settings and save them.",
+ "saved {saved}, the entry {entry}",
+ "on",
+ "off"
 ]

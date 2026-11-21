@@ -564,28 +564,83 @@ def wan(width, height, options):
             cut(found if found else 'no address', width)]
 
 
-def throughput(width, height, options):
-    """How much is moving, on the interface the owner picked."""
-    table = interfaces()
-    device = (options.get('throughput_if') or '').strip()
-    role = ''
+# A kernel name, as the setting held one before 1.3.0 - and not an interface's own name (optN)
+# that is no longer assigned, which is passed over rather than measured as a port.
+THROUGHPUT_NAME = re.compile(r'^(?!opt[0-9]+$)[a-z][a-z0-9_.]*[0-9]$')
 
-    if not device:
+
+def throughput_targets(options, table=None):
+    """[(screen key, device, label)] - one throughput screen per chosen interface.
+
+    In the order the owner chose them, each named by the interface's
+    description. The first keeps the key 'throughput', so a button told to
+    show the throughput screen, and the menu, still find it; the others are
+    'throughput_' and the interface's own name, which is letters and digits
+    and so safe on LCDd's command line.
+
+    A name in the list is an assigned interface (wan, opt1). Before 1.3.0 the
+    setting was one kernel name, and config.xml holds that until the model's
+    migration runs, so a name that is not an interface is read the way
+    Migrations/M1_3_0.php reads it: the interface whose device it is, or,
+    where none is, the device itself. throughput_dev is what the migration
+    keeps of such a device, measured until a choice in the list is saved,
+    which clears it.
+    Nothing chosen and nothing kept is the WAN, as it always was.
+    """
+    if table is None:
+        table = interfaces()
+    owner = {}
+    for role, entry in table.items():
+        owner.setdefault(entry.get('if'), role)
+
+    def named(role):
+        entry = table[role]
+        return entry.get('if', ''), entry.get('descr') or role.upper()
+
+    found = []
+    seen = set()
+
+    def keep(device, label):
+        if device and device not in seen:
+            seen.add(device)
+            found.append((device, label))
+
+    for name in re.split(r'[,\s]+', options.get('throughput_if') or ''):
+        if name in table:
+            keep(*named(name))
+        elif name in owner:
+            keep(*named(owner[name]))
+        elif THROUGHPUT_NAME.match(name):
+            keep(name, name)
+
+    if not found:
+        device = (options.get('throughput_dev') or '').strip()
+        if device in owner:
+            keep(*named(owner[device]))
+        elif THROUGHPUT_NAME.match(device):
+            keep(device, device)
+    if not found and 'wan' in table:
         # Nothing chosen: the WAN is the interface whose rate somebody watching
         # a firewall's front panel almost always means.
-        device = (table.get('wan') or {}).get('if', '')
-        role = 'wan'
+        keep(*named('wan'))
 
-    if not device:
-        return None
+    keys = []
+    for index, (device, label) in enumerate(found):
+        if index == 0:
+            key = 'throughput'
+        else:
+            key = 'throughput_' + (owner.get(device) or re.sub(r'[^a-z0-9]', '_', device))
+        keys.append((key, device, label))
+    return keys
 
-    for name, entry in table.items():
-        if entry.get('if') == device:
-            role = role or name
-            label = entry.get('descr') or name.upper()
+
+def throughput(width, height, options, key='throughput'):
+    """How much is moving, on one of the interfaces the owner picked."""
+    for name, device, label in throughput_targets(options):
+        if name == key:
             break
     else:
-        label = device
+        return None
 
     rate = throughput_rate(device)
     if rate is None:
@@ -713,33 +768,63 @@ SCREENS = [
 BY_KEY = {key: (title, function) for key, title, function in SCREENS}
 
 
+def expand(names, options):
+    """Screen keys, with 'throughput' standing for one screen per chosen interface."""
+    keys = []
+    for name in names:
+        if name == 'throughput':
+            targets = [key for key, _, _ in throughput_targets(options)]
+            keys.extend(targets or ['throughput'])
+        else:
+            keys.append(name)
+    return keys
+
+
+def kind(key):
+    """The screen a key is drawn by: every throughput key is the throughput screen."""
+    return 'throughput' if key.startswith('throughput_') else key
+
+
+def title(key, options):
+    """What the panel's menu calls a screen: a throughput screen by its interface."""
+    if kind(key) == 'throughput':
+        for name, _, label in throughput_targets(options):
+            if name == key:
+                return 'Throughput %s' % label
+    return BY_KEY.get(kind(key), (key,))[0]
+
+
 def chosen(options):
     """The screen keys the settings ask for, in the order they ask for them.
 
     An unknown name is ignored rather than refused: a setting written by a
     newer version of the plugin must not stop an older one from drawing
-    anything at all.
+    anything at all. The throughput screen stands for one screen for each
+    interface chosen for it (expand()).
     """
     raw = (options.get('screens') or '').strip()
     if not raw:
-        return [key for key, _, _ in SCREENS]
+        return expand([key for key, _, _ in SCREENS], options)
 
     wanted = []
     for name in re.split(r'[,\s]+', raw):
         name = name.strip()
         if name in BY_KEY and name not in wanted:
             wanted.append(name)
-    return wanted
+    return expand(wanted, options)
 
 
 def render(key, width, height, options):
     """One screen's finished lines, or None when it has nothing to say."""
-    entry = BY_KEY.get(key)
+    entry = BY_KEY.get(kind(key))
     if entry is None:
         return None
 
     try:
-        lines = entry[1](width, height, options)
+        if kind(key) == 'throughput':
+            lines = throughput(width, height, options, key)
+        else:
+            lines = entry[1](width, height, options)
     except Exception:
         # A screen that throws must not take the panel down with it. The others
         # keep rotating and this one is simply absent until it works again.
@@ -762,17 +847,24 @@ def catalogue(width, height, options, only=None):
     for what the owner typed.
     """
     wanted = chosen(options) if only is None else only
+    every = expand([key for key, _, _ in SCREENS], options)
+    names = dict((key, label) for key, _, label in throughput_targets(options))
     listed = []
 
-    for key, title, _ in SCREENS:
+    for key in every:
         lines = render(key, width, height, options)
         entry = {
             'key': key,
-            'title': title,
+            'kind': kind(key),
+            'title': BY_KEY[kind(key)][0],
             'enabled': key in wanted,
             'available': lines is not None,
             'lines': lines or [],
         }
+        if key in names:
+            # The interface it measures, as its description names it, for the
+            # page to put beside the screen's title.
+            entry['name'] = names[key]
 
         if key == 'message' and lines is not None:
             # Folded but not cut, so the page can draw the part of a line that
@@ -785,12 +877,12 @@ def catalogue(width, height, options, only=None):
                 entry['note'] = 'the panel has no glyph for some of these characters'
 
         if lines is None:
-            entry['reason'] = _absence(key)
+            entry['reason'] = _absence(kind(key))
 
         listed.append(entry)
 
     listed.sort(key=lambda item: (wanted.index(item['key']) if item['key'] in wanted
-                                  else len(wanted) + [k for k, _, _ in SCREENS].index(item['key'])))
+                                  else len(wanted) + every.index(item['key'])))
     return listed
 
 

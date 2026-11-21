@@ -50,6 +50,19 @@ jobs:
       - name: the message screen draws two lines, one to a row
         run: python3 tools/test-message.py
 
+  panel:
+    name: panel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # What an XGS 3100's owner asked for (os-xgs-npu issues 901 and 990): a throughput screen per
+      # chosen interface and the migration from the one kernel name saved before, the keys stopping
+      # the rotation, the 3100's own entry, no heartbeat on a panel the plugin draws, and the hint
+      # when the saved settings differ from the entry. PHP is the runner's, for the migration.
+      - name: the screens, the keys and the 3100's entry
+        run: python3 tools/test-panel.py
+
   syntax:
     name: syntax
     runs-on: ubuntu-latest

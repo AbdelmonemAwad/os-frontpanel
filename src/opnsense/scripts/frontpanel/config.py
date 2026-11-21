@@ -143,10 +143,18 @@ DEFAULTS = {
     # read the same way: see message_lines() below.
     'message': 'NPUforge',
     'message2': 'www.npuforge.com',
+    # The interfaces the throughput screen measures, comma-separated in the order chosen, and a
+    # kernel name kept from before 1.3.0 that no interface owns: see screens.throughput_targets().
     'throughput_if': '',
+    'throughput_dev': '',
     'power': True,
     'keys': [],
 }
+
+# What the settings page shows for the two required fields DEFAULTS leaves empty, before the page is
+# ever saved: the model's own defaults (FrontPanel.xml). Only differences() reads them - nothing is
+# drawn on a port the owner has not saved.
+SHOWN_UNSAVED = {'driver': 'hd44780', 'device': '/dev/cuau1'}
 
 _SIZE = re.compile(r'^\s*(\d{1,3})\s*[xX]\s*(\d{1,3})\s*$')
 
@@ -491,6 +499,63 @@ def draws_direct(options, panel):
             and (options.get('connection') or '').strip() in DIRECT_CONNECTIONS)
 
 
+def heartbeat(options, panel):
+    """Whether LCDd is told to draw its heartbeat.
+
+    Never on a panel the plugin draws itself. LCDd is not started for that
+    panel, so the line written here is read by nothing and the setting could
+    never do anything there; the page stops offering it. An XGS 3100's owner
+    turned it on, saw no mark, and had to line his text up again afterwards
+    (os-xgs-npu issue 901) - from the service restart the Apply made, not from
+    the heartbeat. Why a restart moves the text on that panel is still open;
+    this only stops offering a switch that restarts the service for nothing.
+    A setting saved on before is left as it was, so it is there again if the
+    panel is ever drawn by LCDd.
+    """
+    return bool(options.get('heartbeat')) and not draws_direct(options, panel)
+
+
+def differences(options, panel):
+    """The saved settings that are not what this appliance's entry proposes.
+
+    [{'field', 'saved', 'entry'}], in the order of the settings page, for the
+    five settings the Diagnostics tab's "Put these in the settings" fills in -
+    so that pressing it is exactly what makes the list empty. Values are
+    written the way the page shows them, the keypad as on or off. An entry
+    that proposes nothing (generic) differs from nothing.
+
+    The saved value is the one the settings box shows. Where config.xml has
+    none - a firewall whose page was never saved - that is the model's
+    default, not DEFAULTS' empty one: the driver and the port are required
+    there, so an empty one can only mean nothing was saved, and the box then
+    reads hd44780 and /dev/cuau1. Listing those as differing would put a
+    line above a box that already holds the entry's value.
+
+    Nothing is changed here. The settings tab shows the list and the owner
+    decides; a proposal is still a proposal when it disagrees with what is
+    saved.
+    """
+    panel = panel or {}
+    if not panel.get('driver'):
+        return []
+    proposed = panel.get('options') or {}
+    pairs = [
+        ('driver', options.get('driver') or SHOWN_UNSAVED['driver'], panel.get('driver') or ''),
+        ('connection', options.get('connection') or '', proposed.get('ConnectionType')),
+        ('device', options.get('device') or SHOWN_UNSAVED['device'], proposed.get('Device')),
+        ('size', options.get('size') or '', proposed.get('Size')),
+        ('keypad', 'on' if options.get('keypad') else 'off',
+         None if 'Keypad' not in proposed else ('on' if str(proposed['Keypad']) == 'yes' else 'off')),
+    ]
+    found = []
+    for field, saved, wanted in pairs:
+        if wanted is None or str(wanted).strip() == '':
+            continue   # the entry says nothing about this one
+        if str(saved).strip() != str(wanted).strip():
+            found.append({'field': field, 'saved': str(saved).strip(), 'entry': str(wanted).strip()})
+    return found
+
+
 def serial_speed(options, panel):
     """The line speed of the panel's port, as LCDd is told it.
 
@@ -535,7 +600,7 @@ def settings(root=None):
     values['heartbeat'] = text('heartbeat', '0') == '1'
     values['power'] = text('panel_power', '1') == '1'
 
-    for name in ('driver', 'connection', 'device', 'size', 'screens', 'throughput_if'):
+    for name in ('driver', 'connection', 'device', 'size', 'screens', 'throughput_if', 'throughput_dev'):
         found = text(name)
         if found is not None:
             values[name] = found.strip()
@@ -653,7 +718,7 @@ def render(options, panel=None, known=None):
         # it. Nothing here ever asks, so 'open' would mean "never" and say the
         # opposite of what the setting is called.
         '# the blinking glyph; some panels draw it as a solid block',
-        'Heartbeat=%s' % ('on' if options['heartbeat'] else 'off'),
+        'Heartbeat=%s' % ('on' if heartbeat(options, panel) else 'off'),
         '',
         # What LCDd writes on the glass by itself, at each end of its life. Left
         # alone it has a built-in pair, and the second one is the problem: a

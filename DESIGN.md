@@ -130,7 +130,7 @@ The `[speed]` group exists because a pace that is right on one appliance is unre
 | **`scroll_speed`** | 10 | how fast a line longer than the display scrolls (LCDd `TitleSpeed`) |
 | **`bus_delay`** | 2 | the delay multiplier; raise it if characters go missing |
 | **`refresh_seconds`** | 4 | how often the whole screen is redrawn, so corruption cannot persist |
-| **`heartbeat`** | off | the blinking icon; off because this panel draws it as a solid block (**V**) |
+| **`heartbeat`** | off | the blinking icon; off because this panel draws it as a solid block (**V**); not offered on a panel the plugin draws itself, where LCDd does not run |
 | `screens` | a grid | which screens are shown, in which order |
 | `keys` | a grid | one row per matrix position: the printed label, the LCDd key name, the action — see 5b |
 
@@ -180,7 +180,7 @@ Each screen is a small generator: it returns two lines of at most `size` columns
 
 - **identity** — hostname and the LAN address
 - **wan** — the WAN address and whether the gateway answers
-- **throughput** — in/out on a chosen interface
+- **throughput** — in/out on each chosen interface, one screen each, in the order chosen
 - **system** — CPU, memory, uptime
 - **temperature** — the CPU sensor, where one exists
 - **ports** *(only when os-linkhealth is installed)* — the worst port and its verdict:

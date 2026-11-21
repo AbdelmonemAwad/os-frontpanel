@@ -122,12 +122,16 @@
                 "{{ lang._('The keys are not read by LCDd here. The bridge never answers LCDd\'s key request (FE 06) and sends a letter of its own accord instead, which LCDd would discard - so LCDd is told Keypad=no and the plugin reads the port itself.') }}",
             'The panel is not drawn by LCDd either. Its bridge carries out no positioning command at all - clear, home and the line addresses are swallowed and do nothing - and writes every character at a cursor that runs round all forty cells, the first row and then the second. LCDd rewrites only what changed, so each update moved the whole picture by however many characters it wrote. The plugin draws this panel itself, always forty characters at once, which leaves the cursor where it was; the owner lines the text up once from the Buttons tab.':
                 "{{ lang._('The panel is not drawn by LCDd either. Its bridge carries out no positioning command at all - clear, home and the line addresses are swallowed and do nothing - and writes every character at a cursor that runs round all forty cells, the first row and then the second. LCDd rewrites only what changed, so each update moved the whole picture by however many characters it wrote. The plugin draws this panel itself, always forty characters at once, which leaves the cursor where it was; the owner lines the text up once from the Buttons tab.') }}",
+            'XGS 3100 front panel (board AMDA0202-0003)':
+                "{{ lang._('XGS 3100 front panel (board AMDA0202-0003)') }}",
+            'XGS 3100 (board AMDA0202-0003), 2026-10-30: the display is verified at 9600 - its owner read two lines of text right on the panel at 20x2 and lined them up with Align the text, and the ruler came up with its G in the top left corner, which is where offset 24 starts the text (os-xgs-npu issue 901). The key codes are the XGS 3300\'s and were not measured on this model.':
+                "{{ lang._('XGS 3100 (board AMDA0202-0003), 2026-10-30: the display is verified at 9600 - its owner read two lines of text right on the panel at 20x2 and lined them up with Align the text, and the ruler came up with its G in the top left corner, which is where offset 24 starts the text (os-xgs-npu issue 901). The key codes are the XGS 3300\'s and were not measured on this model.') }}",
+            'Text starts at offset 24: an XGS 3100\'s ruler came up with its G in the top left corner (os-xgs-npu issue 901). If the text sits elsewhere on yours, Align the text, on the Buttons tab, sets it.':
+                "{{ lang._('Text starts at offset 24: an XGS 3100\'s ruler came up with its G in the top left corner (os-xgs-npu issue 901). If the text sits elsewhere on yours, Align the text, on the Buttons tab, sets it.') }}",
             'Sophos XGS front panel (the XGS 2100, 2300 and 3100: the XGS 3300\'s board, AMDA0202)':
                 "{{ lang._('Sophos XGS front panel (the XGS 2100, 2300 and 3100: the XGS 3300\'s board, AMDA0202)') }}",
             'Proposed from the board: these models are built on the XGS 3300\'s board, AMDA0202, on which this panel was confirmed at 9600, and an XGS 3100\'s owner saw the 2400 signature - scattered x-with-a-bar characters - under the general entry. Press Test after applying: two lines of text read right on the panel confirm it.':
                 "{{ lang._('Proposed from the board: these models are built on the XGS 3300\'s board, AMDA0202, on which this panel was confirmed at 9600, and an XGS 3100\'s owner saw the 2400 signature - scattered x-with-a-bar characters - under the general entry. Press Test after applying: two lines of text read right on the panel confirm it.') }}",
-            'Text starts at offset 24: an XGS 3100\'s ruler came up with its G in the top left corner (os-xgs-npu issue 901). If the text sits elsewhere on yours, Align the text, on the Buttons tab, sets it.':
-                "{{ lang._('Text starts at offset 24: an XGS 3100\'s ruler came up with its G in the top left corner (os-xgs-npu issue 901). If the text sits elsewhere on yours, Align the text, on the Buttons tab, sets it.') }}",
             'Sophos XGS (panel not confirmed on this model)':
                 "{{ lang._('Sophos XGS (panel not confirmed on this model)') }}",
             'Nobody has confirmed this model yet. XGS panels confirmed so far - on an XGS 3300 and an XGS 3100 - are 20 characters by 2 lines, so 20x2 is proposed here; older XG models keep 16x2. Press Test after applying: two lines of text read right on the panel confirm it. The key map is copied from XG 330 rev 2 and is a guess here: measure it with the key test before you trust which button is which.':
@@ -381,7 +385,9 @@
         }
 
         function draw_screen(entry, geometry) {
-            const key = String(entry.key || entry.kind || '');
+            /* `kind` is the screen that draws it: the throughput screen comes once for each interface
+               chosen for it, under keys of their own, and each carries the interface's name. */
+            const key = String(entry.kind || entry.key || '');
             const shown = entry.enabled !== false;
             const available = entry.available !== false;
             const $panel = $('<div class="fp-screen"/>');
@@ -389,6 +395,9 @@
             const $heading = $('<div class="fp-screen-head"/>');
             $heading.append($('<span class="fp-screen-name"/>')
                 .text(screen_title[key] || String(entry.title || key)));
+            if (entry.name) {
+                $heading.append(' ').append($('<span class="fp-tech"/>').text(String(entry.name)));
+            }
             if (!shown) {
                 $heading.append(' ').append(label("{{ lang._('not in the rotation') }}", 'label-default'));
             }
@@ -861,6 +870,7 @@
                 draw_keys();
                 draw_devices();
                 draw_suggestion();
+                draw_settings_hint();
                 if (typeof done === 'function') {
                     done();
                 }
@@ -868,7 +878,9 @@
             reload_service_state();
         }
 
-        $('#suggestion-body').on('click', '#applySuggestionAct', function () {
+        /* Fill the settings tab in from the matched entry. Called from the Diagnostics tab's
+           proposal and from the settings tab's own hint, which offer the same five values. */
+        function apply_suggestion() {
             const report = panel_report();
             const panel = (report !== null && is_object(report.panel)) ? report.panel : null;
             if (panel === null) {
@@ -896,7 +908,68 @@
             $('a[href="#settings"]').tab('show');
             show_message(BootstrapDialog.TYPE_INFO, "{{ lang._('Front Panel') }}",
                 "{{ lang._('The settings have been filled in from the table. Read them, then save to apply them.') }}");
-        });
+        }
+
+        $('#suggestion-body').on('click', '#applySuggestionAct', apply_suggestion);
+        $('#settings-panel-note').on('click', '.fp-apply-suggestion', apply_suggestion);
+
+        /* What the settings tab says about this appliance's entry: the saved settings it would
+           change, and the entry's value for each, as the Diagnostics tab's proposal has them. Read
+           from what was saved, not from the boxes, so typing does not make it come and go; and
+           nothing changes until the owner fills the boxes in and saves. */
+        function draw_settings_hint() {
+            const report = panel_report();
+            const $note = $('#settings-panel-note').empty();
+            set_ring(report !== null && report.ring === true);
+            const differs = (report !== null && $.isArray(report.differs)) ? report.differs : [];
+            if (differs.length === 0) {
+                return;
+            }
+            const names = {
+                'driver': "{{ lang._('Driver') }}",
+                'connection': "{{ lang._('Connection type') }}",
+                'device': "{{ lang._('Serial port') }}",
+                'size': "{{ lang._('Size') }}",
+                'keypad': "{{ lang._('Read the keys') }}"
+            };
+            const values = {'on': "{{ lang._('on') }}", 'off': "{{ lang._('off') }}"};
+            const $list = $('<ul class="fp-differs"/>');
+            differs.forEach(function (item) {
+                const field = String(item.field || '');
+                const shown = function (value) {
+                    const text = String(value || '');
+                    return field === 'keypad' ? plain(values[text] || text) : text;
+                };
+                $list.append($('<li/>')
+                    .append($('<b/>').text(plain(names[field] || field)))
+                    .append(': ')
+                    .append($('<span class="fp-tech"/>').text(
+                        plain("{{ lang._('saved {saved}, the entry {entry}') }}")
+                            .replace('{saved}', shown(item.saved) || '-')
+                            .replace('{entry}', shown(item.entry)))));
+            });
+            const panel = is_object(report.panel) ? report.panel : {};
+            $note.append($('<div class="alert alert-info fp-alert" role="alert"/>')
+                .append($('<i class="fa fa-fw fa-info-circle"/>'))
+                .append(' ')
+                .append($('<span/>').text(plain(
+                    "{{ lang._('These saved settings differ from this appliance\'s entry in the table of known panels. Nothing changes until you put the entry\'s values in the settings and save them.') }}"
+                )))
+                .append(' ')
+                .append($('<span class="fp-strong"/>').text(fp_data(String(panel.display || report.match || ''))))
+                .append($list)
+                .append($('<button type="button" class="btn btn-default btn-xs fp-apply-suggestion"/>')
+                    .text("{{ lang._('Put these in the settings') }}")));
+        }
+
+        /* A panel the plugin draws itself: LCDd does not run there, so its heartbeat would do
+           nothing and is not offered; and its text is lined up by Align the text, offered on both
+           tabs. */
+        function set_ring(on) {
+            bt_ring = !!on;
+            $('#fp-align').toggle(bt_ring);
+            $('#frontpanel\\.general\\.heartbeat').closest('tr').toggle(!bt_ring);
+        }
 
         /* ------------------------------------------------------------------ the test line */
 
@@ -958,12 +1031,27 @@
             });
         }
 
+        /* The interfaces arrive in the order the firewall lists them, each flagged if chosen; the
+           order they were chosen in - the order the panel shows them - comes beside the settings,
+           and the chosen ones are moved to the front in it before the tokeniser reads the select. */
+        function prepare_throughput(order) {
+            const $select = $('#frontpanel\\.general\\.throughput_if');
+            if ($select.length === 0 || !$.isArray(order)) {
+                return;
+            }
+            order.slice().reverse().forEach(function (name) {
+                const $option = $select.find('option').filter(function () { return $(this).val() === name; });
+                $option.prependTo($select);
+            });
+        }
+
         const data_get_map = {'frm_general': '/api/frontpanel/settings/get'};
-        mapDataToFormUI(data_get_map).done(function () {
+        mapDataToFormUI(data_get_map).done(function (data) {
             draw_cards();
             /* the choices have to be in the select before the tokeniser reads it, or the list it
                offers is only the screens that were already chosen */
             prepare_rotation();
+            prepare_throughput(((data || {}).frm_general || {}).throughput_order);
             formatTokenizersUI();
             $('.selectpicker').selectpicker('refresh');
             /* the note under the keypad switch has to exist before anything can be written into
@@ -974,6 +1062,8 @@
             /* the ports may well have arrived before the form did */
             devices_drawn = '';
             draw_devices();
+            /* and so may this appliance's entry, which decides whether the heartbeat is offered */
+            draw_settings_hint();
         });
 
         $('#settings').on('click', '.fp-port-pick', function () {
@@ -1192,8 +1282,7 @@
             ajaxGet('/api/frontpanel/service/buttons', {}, function (defaults) {
                 bt_defaults = (defaults && $.isArray(defaults.buttons)) ? defaults.buttons : [];
                 bt_direct = !!(defaults && defaults.direct);
-                bt_ring = !!(defaults && defaults.ring);
-                $('#fp-align').toggle(bt_ring);
+                set_ring(!!(defaults && defaults.ring));
                 ajaxGet('/api/frontpanel/settings/get', {}, function (data) {
                     const grid = (((data || {}).frontpanel || {}).buttons || {}).button || {};
                     bt_rows = {};
@@ -1340,7 +1429,8 @@
                         "{{ lang._('The text could not be aligned.') }}" + failure_text(data));
                     return;
                 }
-                bt_saved("{{ lang._('The text is aligned.') }}");
+                $('#fp-align-saved').text("{{ lang._('The text is aligned.') }}");
+                window.setTimeout(function () { $('#fp-align-saved').text(''); }, 4000);
             });
         });
 
@@ -1484,8 +1574,15 @@
         });
 
         $('a[href="#buttons"]').on('shown.bs.tab', function () {
+            $('#fp-align').appendTo('#fp-align-slot-buttons');
             bt_seen = null;
             bt_load();
+        });
+
+        /* Align the text is reached from the settings tab as well: the same block, moved there
+           while that tab is open, so there is one ruler, one set of handlers and one request. */
+        $('a[href="#settings"]').on('shown.bs.tab', function () {
+            $('#fp-align').appendTo('#fp-align-slot-settings');
         });
 
         /* ------------------------------------------------------------------ page plumbing */
@@ -1839,6 +1936,10 @@
     .fp-bt-cards {
         padding: 0 0 12px;
     }
+    .fp-differs {
+        margin: 6px 0;
+        padding-inline-start: 20px;
+    }
     .fp-align {
         margin-bottom: 12px;
     }
@@ -1972,6 +2073,8 @@
 <div class="tab-content content-box" id="frontpanel">
     <div id="settings" class="tab-pane fade in">
         <div id="rotation-note"></div>
+        <div id="settings-panel-note"></div>
+        <div id="fp-align-slot-settings"></div>
         {{ partial("layout_partials/base_form", ['fields': generalForm, 'id': 'frm_general', 'apply_btn_id': 'saveAct']) }}
     </div>
 
@@ -1994,18 +2097,21 @@
                 <div class="fp-face-lcd" id="fp-face-lcd"><div class="fp-face-line"></div><div class="fp-face-line"></div></div>
                 <div class="fp-face-keys" id="fp-face-keys"></div>
             </div>
+            <div id="fp-align-slot-buttons">
             <div id="fp-align" class="fp-align" style="display: none;">
                 <div class="fp-align-head">
                     <span class="text-muted">{{ lang._('If the text on the panel starts in the wrong place, show the ruler and pick the character in its top-left corner.') }}</span>
                     <button id="alignShowAct" class="btn btn-default btn-xs" type="button">
                         <i class="fa fa-fw fa-arrows-h"></i> {{ lang._('Align the text') }}
                     </button>
+                    <span class="text-success" id="fp-align-saved"></span>
                 </div>
                 <div id="fp-align-pick" style="display: none;">
                     <div class="fp-bt-sub">{{ lang._('The ruler is on the panel. Click the character you see in its top-left corner - or move the text with the arrow keys on the panel until 0 is there, then press Enter.') }}</div>
                     <div class="fp-align-ruler" dir="ltr" id="fp-align-chips"></div>
                     <a href="#" id="alignHideAct">{{ lang._('Cancel') }}</a>
                 </div>
+            </div>
             </div>
             <div id="buttons-note" class="fp-note text-info"></div>
             <div class="fp-cards fp-bt-cards" id="fp-bt-cards"></div>

@@ -61,7 +61,9 @@ model = ET.parse(os.path.join(MODEL, 'FrontPanel.xml')).getroot()
 check('the model ships both lines with their defaults',
       [model.findtext('items/general/message/Default'), model.findtext('items/general/message2/Default')],
       [FIRST, SECOND])
-check('the model is version 1.2.0, the migration\'s', model.findtext('version'), '1.2.0')
+# At least the migration's version, or it never runs; later versions carry later migrations.
+check("the model is at least version 1.2.0, the migration's",
+      tuple(int(part) for part in model.findtext('version').split('.')) >= (1, 2, 0), True)
 check('the migration is there', os.path.isfile(os.path.join(MODEL, 'Migrations', 'M1_2_0.php')), True)
 php = open(os.path.join(MODEL, 'FrontPanel.php'), encoding='utf-8').read()
 check('FrontPanel.php knows the same defaults',
