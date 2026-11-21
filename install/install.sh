@@ -120,6 +120,14 @@ fi
 # reload configd so it picks up the new actions
 service configd restart > /dev/null
 
+# The model's migrations, as the package's post-install runs them: until 2026-11-21 an install or an
+# update from a copy of the repository - the way XGS: Updates' Plugins tab installs a release - never
+# ran them, so a saved value a new model version changes the meaning of (1.3.0's throughput
+# interfaces) stayed as the version before wrote it.
+if [ -f /usr/local/opnsense/mvc/script/run_migrations.php ]; then
+    /usr/local/opnsense/mvc/script/run_migrations.php OPNsense/FrontPanel
+fi
+
 # The menu and the ACL map are cached on disk for an hour each, so until they are dropped the
 # new page is missing from the menu and its ACL tag is unknown to the user manager. Those
 # caches are not in /tmp: they sit in the framework's own tempDir, which is /var/lib/php/tmp
