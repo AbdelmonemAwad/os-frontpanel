@@ -151,6 +151,11 @@ DEFAULTS = {
     'keys': [],
 }
 
+# What the settings page shows for the two required fields DEFAULTS leaves empty, before the page is
+# ever saved: the model's own defaults (FrontPanel.xml). Only differences() reads them - nothing is
+# drawn on a port the owner has not saved.
+SHOWN_UNSAVED = {'driver': 'hd44780', 'device': '/dev/cuau1'}
+
 _SIZE = re.compile(r'^\s*(\d{1,3})\s*[xX]\s*(\d{1,3})\s*$')
 
 # The connection types the plugin can draw on itself: hd44780 behind a serial
@@ -497,12 +502,15 @@ def draws_direct(options, panel):
 def heartbeat(options, panel):
     """Whether LCDd is told to draw its heartbeat.
 
-    Never on a panel the plugin draws itself. LCDd does not draw that panel,
-    and the setting is not offered there: on an XGS 3100 the mark came up as a
-    character its owner could not read, and it pushed his text out of line
-    (os-xgs-npu issue 901). A setting saved on before is left as it was and
-    simply not applied, so it is there again if the panel is ever drawn by
-    LCDd.
+    Never on a panel the plugin draws itself. LCDd is not started for that
+    panel, so the line written here is read by nothing and the setting could
+    never do anything there; the page stops offering it. An XGS 3100's owner
+    turned it on, saw no mark, and had to line his text up again afterwards
+    (os-xgs-npu issue 901) - from the service restart the Apply made, not from
+    the heartbeat. Why a restart moves the text on that panel is still open;
+    this only stops offering a switch that restarts the service for nothing.
+    A setting saved on before is left as it was, so it is there again if the
+    panel is ever drawn by LCDd.
     """
     return bool(options.get('heartbeat')) and not draws_direct(options, panel)
 
@@ -516,6 +524,13 @@ def differences(options, panel):
     written the way the page shows them, the keypad as on or off. An entry
     that proposes nothing (generic) differs from nothing.
 
+    The saved value is the one the settings box shows. Where config.xml has
+    none - a firewall whose page was never saved - that is the model's
+    default, not DEFAULTS' empty one: the driver and the port are required
+    there, so an empty one can only mean nothing was saved, and the box then
+    reads hd44780 and /dev/cuau1. Listing those as differing would put a
+    line above a box that already holds the entry's value.
+
     Nothing is changed here. The settings tab shows the list and the owner
     decides; a proposal is still a proposal when it disagrees with what is
     saved.
@@ -525,9 +540,9 @@ def differences(options, panel):
         return []
     proposed = panel.get('options') or {}
     pairs = [
-        ('driver', options.get('driver') or '', panel.get('driver') or ''),
+        ('driver', options.get('driver') or SHOWN_UNSAVED['driver'], panel.get('driver') or ''),
         ('connection', options.get('connection') or '', proposed.get('ConnectionType')),
-        ('device', options.get('device') or '', proposed.get('Device')),
+        ('device', options.get('device') or SHOWN_UNSAVED['device'], proposed.get('Device')),
         ('size', options.get('size') or '', proposed.get('Size')),
         ('keypad', 'on' if options.get('keypad') else 'off',
          None if 'Keypad' not in proposed else ('on' if str(proposed['Keypad']) == 'yes' else 'off')),

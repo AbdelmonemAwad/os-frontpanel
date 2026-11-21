@@ -60,6 +60,21 @@ class SettingsController extends ApiMutableModelControllerBase
         return $result;
     }
 
+    /**
+     * A choice in the throughput list ends the kernel name kept from before 1.3.0.
+     *
+     * That name is not on the page, so it is cleared here rather than left behind the list: kept, it
+     * would come back the day the list is emptied, and the screen would measure that port instead of
+     * the WAN the page promises for an empty list, with nothing on the page to show why.
+     */
+    protected function setActionHook()
+    {
+        $general = $this->getModel()->general;
+        if (trim((string)$general->throughput_if) !== '') {
+            $general->throughput_dev = '';
+        }
+    }
+
     public function searchButtonAction()
     {
         return $this->searchBase(

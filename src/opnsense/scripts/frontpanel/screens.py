@@ -583,7 +583,8 @@ def throughput_targets(options, table=None):
     migration runs, so a name that is not an interface is read the way
     Migrations/M1_3_0.php reads it: the interface whose device it is, or,
     where none is, the device itself. throughput_dev is what the migration
-    keeps of such a device, measured while nothing is chosen in the list.
+    keeps of such a device, measured until a choice in the list is saved,
+    which clears it.
     Nothing chosen and nothing kept is the WAN, as it always was.
     """
     if table is None:

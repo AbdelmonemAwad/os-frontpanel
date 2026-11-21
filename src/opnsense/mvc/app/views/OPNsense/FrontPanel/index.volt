@@ -962,8 +962,9 @@
                     .text("{{ lang._('Put these in the settings') }}")));
         }
 
-        /* A panel the plugin draws itself: LCDd's heartbeat is not applied there, so it is not
-           offered; and its text is lined up by Align the text, offered on both tabs. */
+        /* A panel the plugin draws itself: LCDd does not run there, so its heartbeat would do
+           nothing and is not offered; and its text is lined up by Align the text, offered on both
+           tabs. */
         function set_ring(on) {
             bt_ring = !!on;
             $('#fp-align').toggle(bt_ring);

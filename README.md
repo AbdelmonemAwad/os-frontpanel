@@ -199,9 +199,13 @@ Which knob to reach for:
   screen change. A quiet line is a responsive keypad.
 - **A solid black block in a corner** — that is the heartbeat, and it is off by default here for
   exactly that reason. Turn it on only if your panel draws it as the small pulsing icon it is meant
-  to be. On a panel the plugin draws itself (the XGS family's, below) it is not offered at all and
-  not applied: there it came out as a character an XGS 3100's owner could not read, and it pushed
-  the text out of line ([os-xgs-npu#901](https://github.com/AbdelmonemAwad/os-xgs-npu/issues/901)).
+  to be. On a panel the plugin draws itself (the XGS family's, below) it is not offered at all:
+  LCDd does not run there, so nothing draws a heartbeat and the setting does nothing. An XGS 3100's
+  owner turned it on all the same, saw nothing, and found his text sixteen cells along after the
+  Apply - not from the heartbeat, but from the service restart that Apply makes
+  ([os-xgs-npu#901](https://github.com/AbdelmonemAwad/os-xgs-npu/issues/901)). Hiding the box
+  takes away one reason to restart; why a restart can move the text on that panel is not known
+  yet, and any Save that restarts the service may still do it. Align the text puts it back.
 - **The settings tab says when the saved settings differ from this appliance's entry** in the table
   of known panels - which settings, and the entry's value for each - and changes nothing until you
   put the entry's values in the settings and save them, as the Diagnostics tab's proposal does.

@@ -43,7 +43,7 @@ use OPNsense\Core\Config;
  *  - a name no assigned interface owns: kept in throughput_dev, which the page does not show
  *    and the screen goes on measuring while nothing is chosen in the list. The list cannot hold
  *    it, and dropping it would quietly move the screen to the WAN on a firewall whose owner had
- *    picked another port on purpose. Choosing an interface in the list replaces it.
+ *    picked another port on purpose. Saving a choice in the list clears it (SettingsController).
  *
  * config.py reads an old value the same way (screens.throughput_targets), so the panel measures
  * the same port before this has run as after.

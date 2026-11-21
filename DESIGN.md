@@ -130,7 +130,7 @@ The `[speed]` group exists because a pace that is right on one appliance is unre
 | **`scroll_speed`** | 10 | how fast a line longer than the display scrolls (LCDd `TitleSpeed`) |
 | **`bus_delay`** | 2 | the delay multiplier; raise it if characters go missing |
 | **`refresh_seconds`** | 4 | how often the whole screen is redrawn, so corruption cannot persist |
-| **`heartbeat`** | off | the blinking icon; off because this panel draws it as a solid block (**V**); not offered or applied on a panel the plugin draws itself |
+| **`heartbeat`** | off | the blinking icon; off because this panel draws it as a solid block (**V**); not offered on a panel the plugin draws itself, where LCDd does not run |
 | `screens` | a grid | which screens are shown, in which order |
 | `keys` | a grid | one row per matrix position: the printed label, the LCDd key name, the action — see 5b |
 

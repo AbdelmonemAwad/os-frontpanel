@@ -248,7 +248,8 @@
                 above, and dropping it would leave a throughput screen measuring something else
                 without anybody having asked. M1_3_0.php moves such a name here, and the screen
                 goes on measuring it for as long as nothing is chosen in the list: choosing an
-                interface there is the owner's answer, and it wins.
+                interface there is the owner's answer, and saving it clears this field
+                (SettingsController::setActionHook), so emptying the list later gives the WAN.
             -->
             <throughput_dev type="TextField">
                 <Mask>/^[a-z][a-z0-9_.]*[0-9]$/</Mask>

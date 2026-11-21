@@ -5,8 +5,9 @@
 without a panel: the throughput screen once for each chosen interface, and the migration that turns
 the one kernel name saved before 1.3.0 into an interface; the keys stopping the rotation on the
 screen being shown and giving it back after a stretch with no key; the appliance table's entry for
-the XGS 3100 alone; the heartbeat never applied on a panel the plugin draws itself; and the list of
-saved settings that differ from this appliance's entry.
+the XGS 3100 alone; the heartbeat never offered on a panel the plugin draws itself; a Save with an
+interface chosen clearing the kernel name kept from before; and the list of saved settings that
+differ from this appliance's entry.
 
 Nothing here touches a firewall. config.xml is a string, the interfaces are a table handed in, no
 counter is read, and the screen client is driven with a stand-in for the panel that only records
@@ -175,6 +176,56 @@ if shutil.which('php'):
 else:
     print('skip the migration: no php here')
 
+# The settings page's Save, as far as the throughput fields go: SettingsController's hook, run on a
+# stand-in for the framework's controller, with the model as two plain fields.
+CONTROLLER = os.path.join(ROOT, 'src', 'opnsense', 'mvc', 'app', 'controllers', 'OPNsense', 'FrontPanel',
+                          'Api', 'SettingsController.php')
+HOOK = r'''<?php
+namespace OPNsense\Base { class ApiMutableModelControllerBase {
+    public $model;
+    protected function getModel() { return $this->model; }
+} }
+namespace {
+    require $argv[1];
+    $controller = new \OPNsense\FrontPanel\Api\SettingsController();
+    $controller->model = new stdClass();
+    $controller->model->general = new stdClass();
+    $controller->model->general->throughput_if = $argv[2];
+    $controller->model->general->throughput_dev = $argv[3];
+    $hook = new ReflectionMethod($controller, 'setActionHook');
+    $hook->setAccessible(true);
+    $hook->invoke($controller);
+    echo json_encode([$controller->model->general->throughput_if, $controller->model->general->throughput_dev]);
+}
+'''
+
+
+def saved_through_page(chosen, kept):
+    folder = tempfile.mkdtemp()
+    try:
+        script = os.path.join(folder, 'hook.php')
+        with open(script, 'w') as handle:
+            handle.write(HOOK)
+        out = subprocess.run(['php', script, CONTROLLER, chosen, kept], capture_output=True, text=True)
+        try:
+            return json.loads(out.stdout.strip())
+        except ValueError:
+            return out.stdout.strip() or out.stderr.strip()
+    finally:
+        shutil.rmtree(folder)
+
+
+if shutil.which('php'):
+    check('saving a choice clears the name kept aside', saved_through_page('lan', 'ix0'), ['lan', ''])
+    check('saving with nothing chosen keeps it', saved_through_page('', 'ix0'), ['', 'ix0'])
+    kept = json.loads(migrated('ix0'))[1]
+    after_choice = saved_through_page('lan', kept)
+    emptied = saved_through_page('', after_choice[1])
+    check('chosen, then emptied, gives the WAN',
+          targets(throughput_if=emptied[0], throughput_dev=emptied[1]), [('throughput', 'igb0')])
+else:
+    print("skip the page's save: no php here")
+
 # --- the XGS 3100's entry -------------------------------------------------------------------------
 
 table = config.load_panels()
@@ -191,9 +242,19 @@ def matched(**fields):
     return config.match_panel(table, fields)[0]
 
 
+# The planar serial's shape: a prefix, the assembly number, and the unit's own number run straight
+# on after its four digits (these digits are made up).
 key, entry = config.match_panel(table, {'maker': MAKER, 'product': 'XGS', 'version': '',
-                                        'serial': 'AMDA0202-0003 0123456789'})
+                                        'serial': 'XYZAMDA0202-000312345678'})
 check('an XGS 3100 matches its own entry', key, 'xgs-3100')
+check('with the assembly number set apart by a space too',
+      matched(maker=MAKER, product='XGS', version='', serial='AMDA0202-0003 0123456789'), 'xgs-3100')
+check("another maker's board with the same strings does not",
+      matched(maker='Other', product='XGS', version='', serial='XYZAMDA0202-000312345678') == 'xgs-3100', False)
+check('nor does a board with no maker at all',
+      matched(maker='', product='XGS', version='', serial='XYZAMDA0202-000312345678') == 'xgs-3100', False)
+check('another assembly of the same board does not',
+      matched(maker=MAKER, product='XGS', version='', serial='XYZAMDA0202-000412345678') == 'xgs-3100', False)
 check('which is confirmed', bool(entry.get('confirmed')), True)
 check('at 9600, 20x2, drawn by the plugin',
       (entry['options'].get('Speed'), entry['options'].get('Size'), entry.get('direct')), ('9600', '20x2', True))
@@ -209,7 +270,9 @@ check('an XGS 3300 still has its own', matched(maker=MAKER, product='XGS', versi
 direct = dict(config.DEFAULTS, driver='hd44780', connection='ezio', device='/dev/cuau1', size='20x2',
               heartbeat=True)
 check('no heartbeat on a panel the plugin draws', config.heartbeat(direct, entry), False)
-check('nor in the configuration written for it', 'Heartbeat=off' in config.render(direct, entry)[0], True)
+# LCDd does not run for that panel, so this line is read by nothing there; it is checked so the file
+# stays truthful if the panel is ever handed back to LCDd.
+check('and the configuration file says off', 'Heartbeat=off' in config.render(direct, entry)[0], True)
 general = PANELS[XG330]
 lcdd = dict(direct, size='16x2')
 check('the heartbeat where LCDd draws the panel', config.heartbeat(lcdd, general), True)
@@ -219,6 +282,13 @@ check('what differs, and the entry\'s value',
       config.differences(dict(direct, size='16x2', keypad=False), entry),
       [{'field': 'size', 'saved': '16x2', 'entry': '20x2'},
        {'field': 'keypad', 'saved': 'off', 'entry': 'on'}])
+unsaved = config.settings(config.ET.fromstring('<opnsense><OPNsense><FrontPanel/></OPNsense></opnsense>'))
+check('never saved: only what the boxes show differently from the entry',
+      config.differences(unsaved, entry),
+      [{'field': 'connection', 'saved': '', 'entry': 'ezio'},
+       {'field': 'size', 'saved': '16x2', 'entry': '20x2'}])
+check("a port saved apart from the entry's is still listed",
+      [row['field'] for row in config.differences(dict(direct, device='/dev/cuau0'), entry)], ['device'])
 check('an entry that proposes nothing differs from nothing',
       config.differences(direct, PANELS['generic']), [])
 

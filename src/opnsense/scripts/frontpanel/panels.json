@@ -115,11 +115,15 @@
         "entry's. The offset: the owner brought the ruler up at offset 0 and read G, its seventeenth character,",
         "in the top left corner - 0 - 16, round forty cells, is 24 - and lined the text up from there.",
         "Matched on the assembly number SMBIOS type 2 carries in its serial, AMDA0202-0003, the one the",
-        "owner's support bundle showed (board 202, OCTEON TX). The 2100 and 2300, -0001 and -0002, still match",
+        "owner's support bundle showed (board 202, OCTEON TX), and on the maker, like every XGS entry here. The",
+        "serial is not anchored at either end on purpose: SMBIOS type 2's serial is a prefix, then the assembly",
+        "number, then the unit's own number run straight on after the assembly's four digits, so an anchor or a",
+        "word boundary there would miss the 3100 it is for. The 2100 and 2300, -0001 and -0002, still match",
         "the board entry below and stay unconfirmed. The key codes are the XGS 3300's; nobody has",
         "measured them on a 3100, and Learn the codes from the panel, on the Buttons tab, sets them."
       ],
       "match": {
+        "maker": "^Sophos$",
         "product": "^XGS$",
         "serial": "AMDA0202-0003"
       },
