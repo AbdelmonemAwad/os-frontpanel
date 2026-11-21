@@ -44,6 +44,22 @@ class SettingsController extends ApiMutableModelControllerBase
     protected static $internalModelName = 'frontpanel';
     protected static $internalModelClass = '\OPNsense\FrontPanel\FrontPanel';
 
+    /**
+     * The settings, and the order the throughput interfaces were chosen in.
+     *
+     * A list of interfaces is handed to the page in the order the firewall lists its interfaces,
+     * with a flag on each one chosen, and the order they were chosen in is lost on the way - yet
+     * that order is the order the panel shows them. So it is handed over beside the settings,
+     * as it is saved, and the page lays the choices out in it before the tokens are drawn.
+     */
+    public function getAction()
+    {
+        $result = parent::getAction();
+        $chosen = trim((string)$this->getModel()->general->throughput_if);
+        $result['throughput_order'] = $chosen === '' ? [] : explode(',', $chosen);
+        return $result;
+    }
+
     public function searchButtonAction()
     {
         return $this->searchBase(

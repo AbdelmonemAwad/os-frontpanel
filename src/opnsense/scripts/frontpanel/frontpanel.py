@@ -174,9 +174,13 @@ AVAILABILITY_SECONDS = 60
 # then doing it on the panel within a few seconds, with nothing restarted.
 RELOAD_SECONDS = 5
 
-# A key press pins the panel to one screen. This is how long that lasts if
-# nobody presses anything else: a rack panel that somebody brushed past must
-# not still be frozen on one screen an hour later.
+# A key press stops the rotation on the screen it finds on the glass, so that
+# whoever pressed it can read the value there (os-xgs-npu issue 901). This is
+# how long the rotation stays stopped after the last press: long enough to
+# read a figure and step through a few more, and a rack panel that somebody
+# brushed past must not still be frozen on one screen an hour later. Fixed
+# rather than a setting, as the menu's own timeout is: it is not a pace of the
+# display anybody tunes, and every press starts it again.
 PINNED_SECONDS = 120
 
 # The four names this plugin was written against, behind everything else. They
@@ -756,7 +760,8 @@ class Client(object):
         # Anything LCDd itself had to be told - the driver, the port, the
         # speeds - is not adopted here: that is a new LCDd.conf and a restart,
         # and `start` does it by comparing the file it wrote.
-        for name in ('screens', 'message', 'message2', 'throughput_if', 'keys', 'keypad', 'power'):
+        for name in ('screens', 'message', 'message2', 'throughput_if', 'throughput_dev', 'keys',
+                     'keypad', 'power'):
             self.options[name] = fresh[name]
         self.actions = keypad.actions_for(self.options)
         if self.port is not None:
@@ -779,6 +784,22 @@ class Client(object):
         wanted += [key for key in self.added
                    if key not in wanted and key not in INTERNAL_SCREENS]
         return wanted
+
+    def hold_shown(self):
+        """Stop the rotation on whatever is on the glass now."""
+        current = self.pinned or self.visible
+        if current not in self.added or current in INTERNAL_SCREENS:
+            order = self.order()
+            current = order[0] if order else ''
+        self.pin(current)
+
+    def resume(self, now):
+        """Give the screens back to the rotation once nobody has pressed a key for a while.
+
+        Not a screen held by the hold key: that one waits for the key again.
+        """
+        if self.pinned and not self.held and now - self.pinned_at >= PINNED_SECONDS:
+            self.unpin()
 
     def step(self, direction):
         order = self.order()
@@ -891,7 +912,12 @@ class Client(object):
     # -- what a button does -----------------------------------------------
 
     def act(self, action, target):
-        if action == 'next':
+        if action in ('next', 'previous') and not self.pinned:
+            # The first press while the screens are rotating stops them where
+            # they are, rather than moving on from a screen somebody was in the
+            # middle of reading; from then on the key steps as it always did.
+            self.hold_shown()
+        elif action == 'next':
             self.step(1)
         elif action == 'previous':
             self.step(-1)
@@ -903,11 +929,7 @@ class Client(object):
             if self.held:
                 self.unpin()
             else:
-                current = self.pinned or self.visible
-                if current not in self.added or current in INTERNAL_SCREENS:
-                    order = self.order()
-                    current = order[0] if order else ''
-                self.pin(current)
+                self.hold_shown()
                 self.held = bool(self.pinned)
         elif action == 'screen':
             self.pin(target)
@@ -915,6 +937,10 @@ class Client(object):
             # Whether anything happens is the driver's business; LCDd takes the
             # command from any client and the ones that cannot do it ignore it.
             self.panel.send('backlight toggle')
+            self.hold_shown()
+        elif action == 'none' and not self.pinned:
+            # A key with nothing of its own to do still stops the rotation.
+            self.hold_shown()
 
     def key(self, name):
         """What a press does.
@@ -946,9 +972,13 @@ class Client(object):
                 # cannot act from underneath it.
                 self.close_menu()
                 self.act(action, target)
-            return
+        else:
+            self.act(action, target)
 
-        self.act(action, target)
+        if self.pinned:
+            # The stretch with no key that gives the screens back is counted
+            # from the last press, whatever that press did.
+            self.pinned_at = time.monotonic()
 
     # -- the loop ---------------------------------------------------------
 
@@ -1017,8 +1047,7 @@ class Client(object):
                 self.reload()
             if now - self.availability_at >= AVAILABILITY_SECONDS:
                 self.refresh_screens()
-            if self.pinned and not self.held and now - self.pinned_at >= PINNED_SECONDS:
-                self.unpin()
+            self.resume(now)
 
     def run(self):
         """Keep serving, and keep coming back when LCDd goes away.
@@ -1677,6 +1706,7 @@ def panels():
             'ttys_detail': detail,
         })
 
+    options = config.settings()
     return {
         'status': 'ok',
         'smbios': fields,
@@ -1684,6 +1714,11 @@ def panels():
         'matched': key != 'generic',
         'panel': entry,
         'confirmed': bool(entry.get('confirmed')),
+        # Whether the plugin draws this panel itself, as the saved settings stand: the
+        # settings tab hides the heartbeat there and offers Align the text.
+        'ring': config.draws_direct(options, entry),
+        # The saved settings this entry would change, for the settings tab's hint.
+        'differs': config.differences(options, entry) if key != 'generic' else [],
         'drivers': config.installed_drivers(),
         'devices': ports,
     }

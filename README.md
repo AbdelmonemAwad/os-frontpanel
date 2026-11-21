@@ -44,8 +44,8 @@ Tested on OPNsense 26.7.4_1 / FreeBSD 15.1, on one machine: an ex-Sophos XG 330 
 panel is 16×2 characters with four keys, on the second of its two serial ports - and since
 2026-10-02 on an XGS 3300 too, which runs it on OPNsense 26.7.8_1 (2026-10-31). Everything below
 that says **measured here** was measured on that machine; everything else is marked where it
-matters. The hardware table ships with ~~**exactly one confirmed entry**~~ **two confirmed entries**, the XG 330
-rev 2's and the XGS 3300's, and
+matters. The hardware table ships with ~~**exactly one confirmed entry**~~ ~~**two confirmed entries**~~ **three confirmed
+entries**, the XG 330 rev 2's, the XGS 3300's and the XGS 3100's, and
 [Other appliances](#other-appliances) says what that means for yours.
 
 <p align="center"><b>Contents:</b> <a href="#the-screen-that-said-sophos-for-months">The screen that said SOPHOS for months</a> &middot; <a href="#what-you-need">What you need</a> &middot; <a href="#nothing-runs-until-you-turn-it-on">Nothing runs until you turn it on</a> &middot; <a href="#the-page">The page</a> &middot; <a href="#settings-and-the-speeds">Settings, and the speeds</a> &middot; <a href="#screens">Screens</a> &middot; <a href="#the-keys">The keys</a> &middot; <a href="#the-buttons-and-the-menu">The buttons and the menu</a> &middot; <a href="#other-appliances">Other appliances</a> &middot; <a href="#installation">Installation</a> &middot; <a href="#how-it-works">How it works</a> &middot; <a href="#the-gui-in-arabic">The GUI in Arabic</a> &middot; <a href="#what-it-does-not-do">What it does not do</a> &middot; <a href="#in-the-xgs-image">In the XGS image</a> &middot; <a href="#updates">Updates</a> &middot; <a href="#license">License</a></p>
@@ -199,7 +199,12 @@ Which knob to reach for:
   screen change. A quiet line is a responsive keypad.
 - **A solid black block in a corner** — that is the heartbeat, and it is off by default here for
   exactly that reason. Turn it on only if your panel draws it as the small pulsing icon it is meant
-  to be.
+  to be. On a panel the plugin draws itself (the XGS family's, below) it is not offered at all and
+  not applied: there it came out as a character an XGS 3100's owner could not read, and it pushed
+  the text out of line ([os-xgs-npu#901](https://github.com/AbdelmonemAwad/os-xgs-npu/issues/901)).
+- **The settings tab says when the saved settings differ from this appliance's entry** in the table
+  of known panels - which settings, and the entry's value for each - and changes nothing until you
+  put the entry's values in the settings and save them, as the Diagnostics tab's proposal does.
 
 Changing any of these rewrites the generated LCDd configuration and restarts the plugin's service.
 Nothing else on the firewall is touched and no other service is restarted.
@@ -213,7 +218,7 @@ order:
 | --- | --- |
 | identity | hostname and the LAN address |
 | wan | the WAN address, and whether the gateway answers |
-| throughput | in and out on an interface you pick |
+| throughput | in and out on each interface you pick, one screen each, in the order picked |
 | system | CPU, memory, uptime |
 | temperature | the CPU sensor, on machines that have one |
 | ports | the worst port and its verdict — `PortA3 FAIL`, `3.8% bad frames` — **only when os-linkhealth is installed** |
@@ -227,6 +232,13 @@ width rather than carried onto the other row - the preview shows exactly where. 
 line is cut, and the preview shows that too. Empty both and the screen is skipped. A message written
 under an earlier release, when it was one line, stays: it becomes the first line, and the second is
 left empty.
+
+The **throughput** screen is shown once for each interface chosen for it - assigned interfaces,
+picked from a list and dragged into order - each named by the interface's description; with none
+chosen it measures the WAN ([os-xgs-npu#990](https://github.com/AbdelmonemAwad/os-xgs-npu/issues/990)).
+Before 1.3.0 of the settings it was one port's kernel name typed into a box: that name becomes the
+interface it belongs to, and a port no interface owns goes on being measured until an interface is
+chosen in the list.
 
 The **ports** screen is the only contact this plugin has with os-linkhealth, another plugin of the family: it
 reads `/var/db/linkhealth/status.json` if that file happens to exist, and the screen simply does not
@@ -273,6 +285,10 @@ None of which the plugin depends on:
   design and not a fallback.
 - Where keys do report, they earn: next screen, previous screen, and a confirm/back pair for a small
   menu. Nothing in the shipped screens needs a key to be reachable.
+- A press stops the rotation on the screen it finds on the glass, so whoever pressed it can read the
+  value there; the arrows step from that screen on, and the rotation starts again by itself two
+  minutes after the last press (os-xgs-npu#901). Escape gives it back at once, and the hold key holds
+  until it is pressed again.
 - The settings page carries a **key test** that says which position last reported, so somebody on
   unknown hardware finds out in ten seconds instead of guessing for an evening.
 
@@ -330,7 +346,7 @@ changed, so each update moved the picture by however many characters it wrote.
 So where the appliance table says `"direct": true`, LCDd is not started: the screen client draws the
 panel itself and only ever writes **forty characters at once, never a command**, which brings the
 cursor back to the cell it started from. Which cell that is - wherever earlier writers left it, kept
-until the panel loses power - is set once: **Align the text** on the Buttons tab puts a ruler of forty
+until the panel loses power - is set once: **Align the text**, on the Buttons tab and on the Settings tab, puts a ruler of forty
 different characters on the panel and you click the one you see in its top-left corner. While the
 ruler is up the panel's arrows move the text one cell a press instead of changing screens, and Enter
 or Escape ends it - the same as System > Align the text in the panel's own menu. The keys are read from the
@@ -353,7 +369,8 @@ reboot flag, and nothing else). The page says so rather than pretending.
 
 ## Other appliances
 
-The table this plugin ships, `panels.json`, has **two confirmed entries**: the Sophos XG 330 rev 2
+The table this plugin ships, `panels.json`, has ~~**two confirmed entries**~~ **three confirmed entries**
+(the third, the XGS 3100's, is below): the Sophos XG 330 rev 2
 above — its display watched and photographed, its four keys measured one at a time, and every word of
 that written into the entry so the page can show it to whoever is about to press Apply — and the
 Sophos XGS 3300, the same panel family at 9600 baud rather than 2400, its display verified and its
@@ -367,7 +384,9 @@ garbles this panel ([os-xgs-npu#901](https://github.com/AbdelmonemAwad/os-xgs-np
 has not been confirmed on that model's panel yet~~ an XGS 3100's owner confirmed it that evening: two
 lines read right at 9600, at 20x2 once Size was set, and lined up with Align the text. That 3100's ruler
 came up with its G in the top-left corner, so since 1.0.6 the entry starts the text at offset 24
-wherever nobody has lined it up yet.
+wherever nobody has lined it up yet. Those are the values the XGS 3100 now has in an entry of its own,
+matched on its assembly number, AMDA0202-0003, and confirmed from that owner's report - so a new
+installation on a 3100 turns its panel on. The 2100 and 2300 keep the board's entry, unconfirmed.
 
 Since 1.0.6 (2026-10-31) any other Sophos XGS has an entry of its own, ahead of the general one, for
 its size: the XGS panels seen so far are 20 characters by 2 lines, and the general entry's 16x2 - the

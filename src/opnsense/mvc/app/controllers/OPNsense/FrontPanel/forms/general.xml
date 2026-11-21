@@ -114,9 +114,10 @@
     </field>
     <field>
         <id>frontpanel.general.throughput_if</id>
-        <label>Throughput interface</label>
-        <type>text</type>
-        <hint>igb0</hint>
-        <help>The name the kernel gives the port the throughput screen measures, as shown under Interfaces. Leave it empty to measure the WAN, which is what somebody watching a firewall's front panel usually means.</help>
+        <label>Throughput interfaces</label>
+        <type>select_multiple</type>
+        <style>tokenize</style>
+        <sortable>true</sortable>
+        <help>The interfaces the throughput screen measures. The panel shows the screen once for each, in the order chosen here - drag them into the order you want - and names each by its description under Interfaces. Leave it empty to measure the WAN, which is what somebody watching a firewall's front panel usually means.</help>
     </field>
 </form>
