@@ -339,7 +339,9 @@ if frontpanel is not None:
     pressed = panel.pinned_at
     panel.resume(pressed + frontpanel.PINNED_SECONDS - 1)
     check('held while a key was pressed lately', panel.pinned, 'wan')
-    panel.resume(pressed + frontpanel.PINNED_SECONDS)
+    # a second past the stretch: (pressed + PINNED_SECONDS) - pressed is a hair under PINNED_SECONDS
+    # for some clock values, as a runner's monotonic clock gave on 2026-11-21 (main's checks, red)
+    panel.resume(pressed + frontpanel.PINNED_SECONDS + 1)
     check('given back after a stretch with no key', panel.pinned, '')
 
     panel = client()
